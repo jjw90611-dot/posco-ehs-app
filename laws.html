@@ -103,7 +103,7 @@
                 <button onclick="search()"><i class="fas fa-search me-2"></i>검색</button>
             </div>
             <div class="db-status" id="dbStatus">
-                <i class="fas fa-database me-1"></i> 안전보건공단 API 준비 완료
+                <i class="fas fa-database me-1"></i> 실시간 법령 데이터베이스 준비 완료
             </div>
         </div>
     </div>
@@ -163,16 +163,15 @@
 
         <div id="loading" style="display: none; text-align: center; padding: 60px 0;">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-            <h5 class="mt-3 text-primary fw-bold">안전보건공단 API에서 실시간 검색 중...</h5>
+            <h5 class="mt-3 text-primary fw-bold">실시간 법령 데이터베이스 검색 중...</h5>
+            <p class="text-muted mt-2">사내망 환경에서는 최대 5초 정도 소요될 수 있습니다.</p>
         </div>
 
         <div id="resultArea" style="display: none;">
-            <!-- 고용노동부 질의회시집 섹션 삭제됨 -->
-
-            <div class="section-title"><i class="fas fa-gavel me-2"></i>산업안전보건법 및 관계 법령 (실시간 API) <span class="badge-count" id="cnt-law">0</span></div>
+            <div class="section-title"><i class="fas fa-gavel me-2"></i>산업안전보건법 및 관계 법령 (실시간) <span class="badge-count" id="cnt-law">0</span></div>
             <div class="row" id="law-content"></div>
 
-            <div class="section-title"><i class="fas fa-book me-2"></i>KOSHA GUIDE 및 미디어 자료 <span class="badge-count" id="cnt-guide">0</span></div>
+            <div class="section-title"><i class="fas fa-book me-2"></i>안전보건 기술지침 및 미디어 자료 <span class="badge-count" id="cnt-guide">0</span></div>
             <div class="row" id="guide-content"></div>
         </div>
 
@@ -203,9 +202,9 @@
         });
 
         // =========================================================
-        // 🔑 KOSHA API 설정 및 app.py 카테고리 매핑 로직
+        // 🔑 공공데이터포털 인증키 및 카테고리 매핑 로직
         // =========================================================
-        const KOSHA_API_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
+        const API_AUTH_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
 
         const CAT_INFO = {
             "8":  { name: "중대재해 처벌법",            search_name: "중대재해 처벌 등에 관한 법률",       priority: 1 },
@@ -224,14 +223,14 @@
         window.onload = function() {
             displayRandomQuote();
             updateVisitCount();
-            // 질의회시집 관련 초기화 로직 제거
-            document.getElementById('dbStatus').innerHTML = `<i class="fas fa-check-circle me-1"></i> 안전보건공단 API 준비 완료`;
+            renderQnaList();
+            document.getElementById('dbStatus').innerHTML = `<i class="fas fa-check-circle me-1"></i> 실시간 법령 데이터베이스 연결 완료`;
             document.getElementById('dbStatus').style.background = '#e6f7ec';
             document.getElementById('dbStatus').style.color = '#00834e';
         };
 
         // =========================================================
-        // 🔍 app.py 원본 로직을 자바스크립트로 구현한 통합 검색
+        // 🔍 실시간 검색 로직 (타임아웃 및 에러 방어 코드 추가)
         // =========================================================
         async function search() {
             const keyword = document.getElementById('searchInput').value.trim();
@@ -244,119 +243,126 @@
 
             let matchedLaws = [];
             let matchedGuides = [];
-            // let matchedQas = []; // 질의회시집 관련 변수 제거
 
-            const kwLower = keyword.toLowerCase();
+            // 사내망 방화벽 무한 로딩 방지를 위한 5초 타임아웃 설정
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-            // 1) 안전보건공단 API (app.py의 smartSearch API 구현)
             try {
-                const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=${KOSHA_API_KEY}&pageNo=1&numOfRows=100&searchValue=${encodeURIComponent(keyword)}&category=0&type=json&_type=json`;
-                const response = await fetch(apiUrl);
+                const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=${API_AUTH_KEY}&pageNo=1&numOfRows=100&searchValue=${encodeURIComponent(keyword)}&category=0&type=json&_type=json`;
+                
+                const response = await fetch(apiUrl, { signal: controller.signal });
+                clearTimeout(timeoutId); 
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    const body = data.response?.body || {};
-                    let itemList = body.items?.item || [];
-                    if (!Array.isArray(itemList)) itemList = [itemList];
+                    const textData = await response.text();
+                    try {
+                        const data = JSON.parse(textData);
+                        const body = data.response?.body || {};
+                        let itemList = body.items?.item || [];
+                        if (!Array.isArray(itemList)) itemList = [itemList];
 
-                    itemList.forEach(item => {
-                        const catId = String(item.category || "");
-                        const title = (item.title || "제목 없음").replace(/<[^>]+>/g, "");
-                        let content = (item.highlight_content || item.content || "").replace(/<[^>]+>/g, "");
+                        itemList.forEach(item => {
+                            const catId = String(item.category || "");
+                            const title = (item.title || "제목 없음").replace(/<[^>]+>/g, "");
+                            let content = (item.highlight_content || item.content || "").replace(/<[^>]+>/g, "");
 
-                        if (CAT_INFO[catId]) {
-                            const catObj = CAT_INFO[catId];
-                            const searchName = catObj.search_name;
-                            
-                            // app.py의 조문 파싱 정규식 동일 적용 (제N조의M)
-                            const articleMatch = title.match(/제(\d+)조(?:의(\d+))?/);
-                            let lawLink = "";
+                            if (CAT_INFO[catId]) {
+                                const catObj = CAT_INFO[catId];
+                                const searchName = catObj.search_name;
+                                
+                                const articleMatch = title.match(/제(\d+)조(?:의(\d+))?/);
+                                let lawLink = "";
 
-                            if (searchName) {
-                                if (articleMatch) {
-                                    const joNo = articleMatch[1];
-                                    const joBrNo = articleMatch[2];
-                                    lawLink = joBrNo 
-                                        ? `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조의${joBrNo}`
-                                        : `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조`;
+                                if (searchName) {
+                                    if (articleMatch) {
+                                        const joNo = articleMatch[1];
+                                        const joBrNo = articleMatch[2];
+                                        lawLink = joBrNo 
+                                            ? `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조의${joBrNo}`
+                                            : `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조`;
+                                    } else {
+                                        lawLink = `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}`;
+                                    }
                                 } else {
-                                    lawLink = `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}`;
+                                    lawLink = `https://www.law.go.kr/admRulSc.do?menuId=5&subMenuId=41&query=${encodeURIComponent(title)}`;
                                 }
-                            } else {
-                                lawLink = `https://www.law.go.kr/admRulSc.do?menuId=5&subMenuId=41&query=${encodeURIComponent(title)}`;
+
+                                let customPriority = catObj.priority;
+
+                                if (keyword === "난간" && catObj.name === "산업안전보건기준에 관한 규칙" && title.includes("제13조")) {
+                                    customPriority = -1;
+                                }
+                                if (keyword === "매뉴얼" && catObj.name === "중대재해 처벌법 시행령" && title.includes("제4조")) {
+                                    customPriority = -1;
+                                    content = "8. 사업 또는 사업장에 중대산업재해가 발생하거나 발생할 급박한 위험이 있을 경우를 대비하여 다음 각 목의 조치에 관한 매뉴얼을 마련하고, 해당 매뉴얼에 따라 조치하는지를 반기 1회 이상 점검할 것\n가. 작업 중지, 근로자 대피, 위험요인 제거 등 대응조치\n나. 중대산업재해를 입은 사람에 대한 구호조치\n다. 추가 피해방지를 위한 조치";
+                                }
+
+                                matchedLaws.push({
+                                    category_name: catObj.name,
+                                    title: title,
+                                    content: content,
+                                    priority: customPriority,
+                                    link: lawLink
+                                });
+
+                            } else if (catId === "7") {
+                                matchedGuides.push({
+                                    category_name: "안전보건 기술지침",
+                                    title: title,
+                                    content: content,
+                                    link: "https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10"
+                                });
+                            } else if (catId === "6") {
+                                matchedGuides.push({
+                                    category_name: item.media_style || "미디어",
+                                    title: title,
+                                    content: "안전보건 기술미디어 자료입니다.",
+                                    link: item.filepath || "https://www.kosha.or.kr"
+                                });
                             }
+                        });
 
-                            let customPriority = catObj.priority;
-
-                            // app.py 의 '난간' 및 '매뉴얼' 특수 키워드 가공 로직 적용
-                            if (keyword === "난간" && catObj.name === "산업안전보건기준에 관한 규칙" && title.includes("제13조")) {
-                                customPriority = -1;
-                            }
-                            if (keyword === "매뉴얼" && catObj.name === "중대재해 처벌법 시행령" && title.includes("제4조")) {
-                                customPriority = -1;
-                                content = "8. 사업 또는 사업장에 중대산업재해가 발생하거나 발생할 급박한 위험이 있을 경우를 대비하여 다음 각 목의 조치에 관한 매뉴얼을 마련하고, 해당 매뉴얼에 따라 조치하는지를 반기 1회 이상 점검할 것\n가. 작업 중지, 근로자 대피, 위험요인 제거 등 대응조치\n나. 중대산업재해를 입은 사람에 대한 구호조치\n다. 추가 피해방지를 위한 조치";
-                            }
-
-                            matchedLaws.push({
-                                category_name: catObj.name,
-                                title: title,
-                                content: content,
-                                priority: customPriority,
-                                link: lawLink
-                            });
-
-                        } else if (catId === "7") {
-                            matchedGuides.push({
-                                category_name: "KOSHA GUIDE",
-                                title: title,
-                                content: content,
-                                link: "https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10"
-                            });
-                        } else if (catId === "6") {
-                            matchedGuides.push({
-                                category_name: item.media_style || "미디어",
-                                title: title,
-                                content: "안전보건공단 기술미디어 자료입니다.",
-                                link: item.filepath || "https://www.kosha.or.kr"
-                            });
-                        }
-                    });
-
-                    // 우선순위 정렬 (app.py 동일)
-                    matchedLaws.sort((a, b) => a.priority - b.priority);
+                        matchedLaws.sort((a, b) => a.priority - b.priority);
+                    } catch (parseErr) {
+                        console.warn("API 응답 파싱 오류 발생", parseErr);
+                    }
                 }
             } catch (err) {
-                console.log("공단 API 호출 실패 또는 네트워크 차단 - 백업 링크 제공:", err);
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') {
+                    console.warn("DB 응답 시간 초과 (사내 망 방화벽 차단 가능성)");
+                } else {
+                    console.warn("DB 호출 실패 또는 네트워크 차단:", err);
+                }
             }
 
-            // 결과가 없을 경우 국가법령 정보센터 자동 검색 링크 제공
+            // API 호출 실패 또는 결과가 없을 경우 백업 링크 무조건 제공
             if (matchedLaws.length === 0) {
                 matchedLaws.push({
-                    category_name: "국가법령정보센터",
-                    title: `"${keyword}" 관련 법령 검색 결과`,
-                    content: `클릭 시 국가법령정보센터에서 "${keyword}"와 관련된 실시간 법조문을 직접 확인하실 수 있습니다.`,
+                    category_name: "국가법령정보센터 (직접 검색)",
+                    title: `"${keyword}" 관련 법령 검색 결과 확인하기`,
+                    content: `사내망 보안 정책 또는 서버 지연으로 실시간 데이터를 불러오지 못했습니다.\n클릭 시 국가법령정보센터에서 "${keyword}"와 관련된 법조문을 직접 확인하실 수 있습니다.`,
                     link: `https://www.law.go.kr/lsSc.do?query=${encodeURIComponent(keyword)}`
                 });
             }
 
             if (matchedGuides.length === 0) {
                 matchedGuides.push({
-                    category_name: "KOSHA GUIDE",
-                    title: `"${keyword}" 관련 기술지침 검색`,
-                    content: `한국산업안전보건공단에서 제공하는 "${keyword}" 기술지침 검색 결과입니다.`,
+                    category_name: "안전보건 기술지침 (직접 검색)",
+                    title: `"${keyword}" 관련 기술지침 검색 확인하기`,
+                    content: `"${keyword}" 관련 기술지침 검색 결과 페이지로 이동합니다.`,
                     link: `https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10`
                 });
             }
 
-            // 화면 렌더링
+            // 로딩 숨기고 결과창 표시
             document.getElementById('loading').style.display = 'none';
             document.getElementById('resultArea').style.display = 'block';
 
-            // document.getElementById('cnt-qa').innerText = matchedQas.length + '건'; // 질의회시집 카운트 제거
             document.getElementById('cnt-law').innerText = matchedLaws.length + '건';
             document.getElementById('cnt-guide').innerText = matchedGuides.length + '건';
 
-            // renderQaGrid('qa-content', matchedQas, keyword); // 질의회시집 렌더링 제거
             renderLawGrid('law-content', matchedLaws, keyword);
             renderLawGrid('guide-content', matchedGuides, keyword);
         }
@@ -369,8 +375,6 @@
             const regex = new RegExp(`(${escapedKw})`, "gi");
             return String(text).replace(regex, "<span class='highlight'>$1</span>");
         }
-
-        // renderQaGrid 함수 제거됨
 
         function renderLawGrid(elementId, items, keyword) {
             const container = document.getElementById(elementId);
@@ -391,18 +395,93 @@
         }
 
         // =========================================================
+        // 💬 법규 Q&A 게시판 기능 (Local Storage 기반)
+        // =========================================================
+        function submitQuestion() {
+            const author = document.getElementById('qAuthor').value.trim() || '익명';
+            const content = document.getElementById('qContent').value.trim();
+            if (!content) { alert('질문 내용을 입력해주세요.'); return; }
+
+            const qnaData = JSON.parse(localStorage.getItem('posco_qna_list') || '[]');
+            qnaData.unshift({
+                id: Date.now(),
+                author: author,
+                content: content,
+                date: new Date().toLocaleDateString()
+            });
+
+            localStorage.setItem('posco_qna_list', JSON.stringify(qnaData));
+            document.getElementById('qContent').value = '';
+            renderQnaList();
+        }
+
+        function renderQnaList() {
+            const qnaList = document.getElementById('qnaList');
+            if (!qnaList) return;
+            const qnaData = JSON.parse(localStorage.getItem('posco_qna_list') || '[]');
+
+            if (qnaData.length === 0) {
+                qnaList.innerHTML = `<div class="card p-4 text-center text-muted">등록된 질문이 없습니다. 첫 번째 질문을 등록해보세요!</div>`;
+                return;
+            }
+
+            let html = '';
+            qnaData.forEach(item => {
+                html += `
+                    <div class="card p-3 mb-3 border-0 shadow-sm" style="border-left: 4px solid #005baa !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-primary"><i class="fas fa-user-circle me-1"></i>${item.author}</span>
+                            <small class="text-muted">${item.date}</small>
+                        </div>
+                        <div class="text-dark fw-500" style="font-size: 1.1rem;">${item.content}</div>
+                    </div>`;
+            });
+            qnaList.innerHTML = html;
+        }
+
+        // =========================================================
         // 기타 유틸리티 함수
         // =========================================================
-        const safetyQuotes = ["법은 최소한의 조치입니다.", "위험을 보면 멈추세요.", "모든 사고는 예방할 수 있습니다."];
-        function displayRandomQuote() { document.getElementById('dailyQuote').innerText = safetyQuotes[Math.floor(Math.random() * safetyQuotes.length)]; }
+        const safetyQuotes = [
+            "법은 최소한의 조치이지 우리는 법 이상의 안전관리를 지향해야 한다.",
+            "위험을 보면 멈추세요. 당신의 작업중지권이 우리 모두의 안전을 지킵니다.",
+            "모든 사고는 예방할 수 있습니다.",
+            "나는 안전하게, 동료는 더 안전하게.",
+            "안전에 대한 관심과 실천이 사고 예방의 시작입니다.",
+            "안전사고 예방의 시작은 '나 자신'과 '동료'의 안전에 대한 관심입니다.",
+            "'위험하면 즉시 멈춘다'. '잠깐이면 괜찮다'는 판단이 큰 사고로 이어질 수 있습니다.",
+            "사전 검토되지 않은 작업, 임의판단에 따른 작업을 엄격히 금지합니다.",
+            "우리는 자기주도적인 안전실천을 통해 예방의 주체!",
+            "안전의 시작과 끝은 표준이며 작업표준 없는 작업은 절대 금지.",
+            "안전 확보를 위한 마주이야기를 통한 끊임 없는 소통.",
+            "유해위험점이 발견되면 즉시 작업중지권 사용.",
+            "비 온 뒤에 땅이 굳듯 걱정하는 안전말고 생각하는 안전활동!"
+        ];
+        
+        function displayRandomQuote() { 
+            document.getElementById('dailyQuote').innerText = safetyQuotes[Math.floor(Math.random() * safetyQuotes.length)]; 
+        }
+        
         function updateVisitCount() {
             let today = parseInt(localStorage.getItem('posco_visit_today') || 1);
             let total = parseInt(localStorage.getItem('posco_visit_total') || 128);
             document.getElementById('visitToday').innerText = today;
             document.getElementById('visitTotal').innerText = total;
         }
-        function showHome() { document.getElementById('homeArea').style.display = 'block'; document.getElementById('resultArea').style.display = 'none'; document.getElementById('qnaArea').style.display = 'none'; }
-        function showQnA() { document.getElementById('homeArea').style.display = 'none'; document.getElementById('resultArea').style.display = 'none'; document.getElementById('qnaArea').style.display = 'block'; }
+        
+        function showHome() { 
+            document.getElementById('homeArea').style.display = 'block'; 
+            document.getElementById('resultArea').style.display = 'none'; 
+            document.getElementById('qnaArea').style.display = 'none'; 
+            displayRandomQuote(); 
+        }
+        
+        function showQnA() { 
+            document.getElementById('homeArea').style.display = 'none'; 
+            document.getElementById('resultArea').style.display = 'none'; 
+            document.getElementById('qnaArea').style.display = 'block'; 
+            renderQnaList(); 
+        }
     </script>
 </body>
 </html>
