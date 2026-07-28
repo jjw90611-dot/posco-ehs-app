@@ -15,12 +15,14 @@
             -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
         }
 
+        /* 상단 네비게이션 바 */
         .navbar-custom { background-color: #004280; padding: 15px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .navbar-brand { font-weight: 900; color: white !important; font-size: 1.8rem; letter-spacing: -1px; text-decoration: none; }
         .nav-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 8px 18px; margin-left: 8px; font-size: 1rem; transition: 0.3s; text-decoration: none; font-weight: 700; }
         .nav-btn:hover { background: white; color: #004280; }
         .visit-badge { background-color: rgba(255,255,255,0.2); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.95rem; font-weight: bold; margin-right: 10px; display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); }
 
+        /* 검색창 영역 */
         .search-section { padding: 40px 0; text-align: center; }
         .search-box { max-width: 800px; margin: 0 auto; position: relative; }
         .search-box input { 
@@ -30,6 +32,7 @@
         .search-box button { position: absolute; right: 10px; top: 10px; bottom: 10px; background-color: #005baa; color: white; border: none; border-radius: 40px; padding: 0 35px; font-size: 1.2rem; font-weight: bold; transition: 0.3s; }
         .search-box button:hover { background-color: #003366; }
 
+        /* 캠페인 배너 */
         .campaign-container { border: 4px solid #00b050; border-radius: 15px; padding: 30px; background-color: white; margin: 10px auto 30px; max-width: 900px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
         .campaign-title { font-weight: 900; font-size: 1.6rem; text-align: left; margin-bottom: 20px; color: #000; }
         .campaign-cards { display: flex; gap: 15px; justify-content: space-between; margin-bottom: 30px; }
@@ -41,24 +44,13 @@
         .campaign-footer { font-size: 1.6rem; font-weight: 800; color: #000; text-align: center; }
         .highlight-green-underline { text-decoration: underline; text-decoration-color: #00b050; text-decoration-thickness: 5px; text-underline-offset: 6px; }
 
-        .quote-container { background-color: #e6f0fa; border-left: 6px solid #005baa; padding: 25px 30px; border-radius: 10px; max-width: 900px; margin: 0 auto 40px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        /* 오늘의 안전 메시지 */
+        .quote-container { background-color: #e6f0fa; border-left: 6px solid #005baa; padding: 25px 30px; border-radius: 10px; max-width: 900px; margin: 0 auto 30px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .quote-title { font-size: 1.2rem; font-weight: 900; color: #005baa; margin-bottom: 15px; letter-spacing: 1px; }
         .quote-text { font-size: 1.4rem; font-weight: 800; color: #333; word-break: keep-all; line-height: 1.5; }
         .quote-icon { color: #005baa; font-size: 1.3rem; opacity: 0.4; margin: 0 10px; }
 
-        .news-scroll-container { max-height: 450px; overflow-y: auto; overflow-x: hidden; padding-right: 10px; margin-bottom: 20px; }
-        .news-scroll-container::-webkit-scrollbar { width: 8px; }
-        .news-scroll-container::-webkit-scrollbar-thumb { background-color: #00b050; border-radius: 4px; }
-        .news-scroll-container::-webkit-scrollbar-track { background-color: #f1f1f1; border-radius: 4px; }
-
-        .news-card { background: white; border-radius: 12px; padding: 20px; height: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid #00b050; transition: transform 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
-        .news-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-        .news-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .news-title a { color: #222; text-decoration: none; }
-        .news-title a:hover { color: #005baa; text-decoration: underline; }
-        .news-date { font-size: 0.95rem; color: #777; font-weight: 600; }
-        .news-source { display: inline-block; font-size: 0.85rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; margin-bottom: 10px; background-color: #e8f0fe; color: #1a73e8; border: 1px solid #1a73e8; }
-
+        /* 검색 결과 영역 */
         .section-title { font-size: 1.6rem; font-weight: 800; color: #004280; margin: 40px 0 20px; padding-bottom: 10px; border-bottom: 2px solid #e0e6ed; }
         .badge-count { background-color: #005baa; color: white; font-size: 1.1rem; padding: 4px 12px; border-radius: 20px; margin-left: 10px; }
 
@@ -166,22 +158,11 @@
                 </div>
             </div>
 
-            <div style="max-width: 900px; margin: 0 auto;">
-                <div class="section-title" style="margin-top: 0;"><i class="fas fa-newspaper"></i> 실시간 안전보건 뉴스</div>
-                <div class="news-scroll-container">
-                    <div class="row" id="newsList">
-                        <div class="col-12 text-center text-muted py-4">
-                            <div class="spinner-border text-success mb-2" role="status"></div>
-                            <div>최신 안전 뉴스를 연결하고 있습니다...</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="safety-news-section" style="max-width: 900px; margin: 40px auto 0; padding: 25px; background-color: #f8f9fa; border-radius: 15px; border-top: 4px solid #d32f2f; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- 언론사 바로가기 배너 -->
+            <div class="safety-news-section" style="max-width: 900px; margin: 0 auto; padding: 25px; background-color: #f8f9fa; border-radius: 15px; border-top: 4px solid #d32f2f; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <div class="section-title" style="margin-top: 0; border-bottom: none; padding-bottom: 0;"><i class="fas fa-hard-hat"></i> 안전전문지 바로가기</div>
                 <p style="font-size: 1.1rem; color: #666; margin-bottom: 20px; text-align: center;">
-                    아래 배너를 클릭하시면 각 언론사의 실시간 헤드라인을 직접 확인하실 수 있습니다.
+                    아래 배너를 클릭하시면 주요 언론사의 실시간 안전보건 뉴스를 바로 확인하실 수 있습니다.
                 </p>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
                     <a href="https://www.safetynews.co.kr/" target="_blank" style="flex: 1; min-width: 250px; text-decoration: none;">
@@ -357,7 +338,6 @@
         window.onload = function() {
             displayRandomQuote();
             updateVisitCount();
-            loadNews();
         };
 
         function updateVisitCount() {
@@ -375,71 +355,6 @@
             }
             document.getElementById('visitToday').innerText = today;
             document.getElementById('visitTotal').innerText = total;
-        }
-
-        // 실시간 안전 뉴스 수집 (CORS 다중 우회)
-        function loadNews() {
-            const newsContainer = document.getElementById('newsList');
-            const targetRss = "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84%EB%B3%B4%EA%B1%B4+%EC%82%B0%EC%97%85%EC%95%88%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko";
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetRss)}`;
-
-            fetch(proxyUrl)
-                .then(res => res.json())
-                .then(data => {
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-                    const items = xmlDoc.querySelectorAll("item");
-
-                    if (items && items.length > 0) {
-                        let html = '';
-                        items.forEach((item, index) => {
-                            if (index >= 8) return;
-                            const title = item.querySelector("title") ? item.querySelector("title").textContent : "안전보건 소식";
-                            const link = item.querySelector("link") ? item.querySelector("link").textContent : "#";
-                            const pubDate = item.querySelector("pubDate") ? item.querySelector("pubDate").textContent.substring(0, 16) : "최신 뉴스";
-
-                            html += `
-                                <div class="col-md-6 mb-3">
-                                    <div class="news-card">
-                                        <div>
-                                            <span class="news-source"><i class="fas fa-newspaper me-1"></i> 실시간 뉴스</span>
-                                            <div class="news-title"><a href="${link}" target="_blank">${title}</a></div>
-                                        </div>
-                                        <div class="news-date mt-2"><i class="far fa-clock me-1"></i>${pubDate}</div>
-                                    </div>
-                                </div>`;
-                        });
-                        newsContainer.innerHTML = html;
-                    } else {
-                        renderFallbackNews();
-                    }
-                })
-                .catch(() => {
-                    renderFallbackNews();
-                });
-        }
-
-        function renderFallbackNews() {
-            const fallbackData = [
-                { title: "고용노동부, 폭염 대비 온열질환 예방 특별 점검 실시", link: "https://www.safetynews.co.kr/", date: "2025-01-15" },
-                { title: "포스코퓨처엠, 자기주도적 안전문화 정착 및 작업중지권 적극 권장", link: "https://www.idsn.co.kr/", date: "2025-01-14" },
-                { title: "중대재해처벌법 현장 가이드라인 마련 및 위험성평가 강화", link: "http://www.safetimes.co.kr/", date: "2025-01-13" },
-                { title: "산업안전보건공단, 밀폐공간 질식재해 예방 장비 무상 지원", link: "https://www.safetynews.co.kr/", date: "2025-01-12" }
-            ];
-            let html = '';
-            fallbackData.forEach(item => {
-                html += `
-                    <div class="col-md-6 mb-3">
-                        <div class="news-card">
-                            <div>
-                                <span class="news-source"><i class="fas fa-shield-alt me-1"></i> 주요 안전뉴스</span>
-                                <div class="news-title"><a href="${item.link}" target="_blank">${item.title}</a></div>
-                            </div>
-                            <div class="news-date mt-2"><i class="far fa-clock me-1"></i>${item.date}</div>
-                        </div>
-                    </div>`;
-            });
-            document.getElementById('newsList').innerHTML = html;
         }
 
         function displayRandomQuote() {
@@ -462,7 +377,7 @@
             loadQnA();
         }
 
-        // 통합 검색 기능 (폭염, 밀폐공간 등 키워드 스마트 검색)
+        // 스마트 통합 검색
         function search() {
             const keyword = document.getElementById('searchInput').value.trim();
             if (!keyword) { alert('검색어를 입력해주세요.'); return; }
@@ -480,7 +395,6 @@
                 let matchedGuides = [];
                 let matchedQas = [];
 
-                // 1) 내장 DB에서 검색
                 SAFETY_KNOWLEDGE_BASE.forEach(entry => {
                     if (entry.keywords.some(k => k.includes(keyword) || keyword.includes(k))) {
                         matchedLaws.push(...entry.laws);
@@ -489,7 +403,6 @@
                     }
                 });
 
-                // 2) 매칭 데이터가 없더라도 국가법령정보센터 자동 세부 조문 매핑
                 if (matchedLaws.length === 0) {
                     matchedLaws.push({
                         category_name: "산업안전보건기준에 관한 규칙",
@@ -524,7 +437,7 @@
                 renderLawGrid('guide-content', matchedGuides, keyword);
                 renderMediaGrid('media-content', [{ type: "기술자료", title: `[${keyword}] 관련 안전작업 수칙 및 교육자료`, link: "https://www.kosha.or.kr/" }]);
 
-            }, 300);
+            }, 200);
         }
 
         function highlight(text, keyword) {
