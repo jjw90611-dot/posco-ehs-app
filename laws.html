@@ -295,7 +295,7 @@
             try {
                 if (typeof RAW_SAFETY_QA_CSV !== 'undefined' && RAW_SAFETY_QA_CSV.trim().length > 0) {
                     PARSED_SAFETY_QA = parseCSVText(RAW_SAFETY_QA_CSV);
-                    statusEl.innerHTML = `<i class="fas fa-check-circle me-1"></i> 공단 API 연동 및 질의회시집 DB <strong>${PARSED_SAFETY_QA.length}건</strong> 준비 완료`;
+                    statusEl.innerHTML = '<i class="fas fa-check-circle me-1"></i> 공단 API 연동 및 질의회시집 DB <strong>' + PARSED_SAFETY_QA.length + '건</strong> 준비 완료';
                     statusEl.style.background = '#e6f7ec';
                     statusEl.style.color = '#00834e';
                 }
@@ -327,8 +327,8 @@
                 const fullText = [item.title, item.q, item.a, item.chapter, item.section, item.source].join(' ').toLowerCase();
                 if (fullText.includes(kwLower)) {
                     matchedQas.push({
-                        category: `${item.chapter} > ${item.section}`,
-                        question: `[${item.num}] ${item.title}${item.q ? ' - ' + item.q : ''}`,
+                        category: item.chapter + ' > ' + item.section,
+                        question: '[' + item.num + '] ' + item.title + (item.q ? ' - ' + item.q : ''),
                         answer: item.a,
                         source: item.source
                     });
@@ -337,26 +337,28 @@
 
             // 2) 안전보건공단 API (app.py의 smartSearch API 구현)
             try {
-                const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=${KOSHA_API_KEY}&pageNo=1&numOfRows=100&searchValue=${encodeURIComponent(keyword)}&category=0&type=json&_type=json`;
+                const apiUrl = 'https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=' + KOSHA_API_KEY + '&pageNo=1&numOfRows=100&searchValue=' + encodeURIComponent(keyword) + '&category=0&type=json&_type=json';
                 const response = await fetch(apiUrl);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    const body = data.response?.body || {};
-                    let itemList = body.items?.item || [];
+                    const body = (data.response && data.response.body) || {};
+                    let itemList = (body.items && body.items.item) || [];
                     if (!Array.isArray(itemList)) itemList = [itemList];
 
                     itemList.forEach(item => {
                         const catId = String(item.category || "");
-                        const title = (item.title || "제목 없음").replace(/<[^>]+>/g, "");
-                        let content = (item.highlight_content || item.content || "").replace(/<[^>]+>/g, "");
+                        const stripTagRe = new RegExp("<[^>]+>", "g");
+                        const title = (item.title || "제목 없음").replace(stripTagRe, "");
+                        let content = (item.highlight_content || item.content || "").replace(stripTagRe, "");
 
                         if (CAT_INFO[catId]) {
                             const catObj = CAT_INFO[catId];
                             const searchName = catObj.search_name;
                             
                             // app.py의 조문 파싱 정규식 동일 적용 (제N조의M)
-                            const articleMatch = title.match(/제(\d+)조(?:의(\d+))?/);
+                            const articleRe = new RegExp("제(\\d+)조(?:의(\\d+))?");
+                            const articleMatch = title.match(articleRe);
                             let lawLink = "";
 
                             if (searchName) {
@@ -364,13 +366,13 @@
                                     const joNo = articleMatch[1];
                                     const joBrNo = articleMatch[2];
                                     lawLink = joBrNo 
-                                        ? `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조의${joBrNo}`
-                                        : `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조`;
+                                        ? 'https://www.law.go.kr/법령/' + encodeURIComponent(searchName) + '/제' + joNo + '조의' + joBrNo
+                                        : 'https://www.law.go.kr/법령/' + encodeURIComponent(searchName) + '/제' + joNo + '조';
                                 } else {
-                                    lawLink = `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}`;
+                                    lawLink = 'https://www.law.go.kr/법령/' + encodeURIComponent(searchName);
                                 }
                             } else {
-                                lawLink = `https://www.law.go.kr/admRulSc.do?menuId=5&subMenuId=41&query=${encodeURIComponent(title)}`;
+                                lawLink = 'https://www.law.go.kr/admRulSc.do?menuId=5&subMenuId=41&query=' + encodeURIComponent(title);
                             }
 
                             let customPriority = catObj.priority;
@@ -420,18 +422,18 @@
             if (matchedLaws.length === 0) {
                 matchedLaws.push({
                     category_name: "국가법령정보센터",
-                    title: `"${keyword}" 관련 법령 검색 결과`,
-                    content: `클릭 시 국가법령정보센터에서 "${keyword}"와 관련된 실시간 법조문을 직접 확인하실 수 있습니다.`,
-                    link: `https://www.law.go.kr/lsSc.do?query=${encodeURIComponent(keyword)}`
+                    title: '"' + keyword + '" 관련 법령 검색 결과',
+                    content: '클릭 시 국가법령정보센터에서 "' + keyword + '"와 관련된 실시간 법조문을 직접 확인하실 수 있습니다.',
+                    link: 'https://www.law.go.kr/lsSc.do?query=' + encodeURIComponent(keyword)
                 });
             }
 
             if (matchedGuides.length === 0) {
                 matchedGuides.push({
                     category_name: "KOSHA GUIDE",
-                    title: `"${keyword}" 관련 기술지침 검색`,
-                    content: `한국산업안전보건공단에서 제공하는 "${keyword}" 기술지침 검색 결과입니다.`,
-                    link: `https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10`
+                    title: '"' + keyword + '" 관련 기술지침 검색',
+                    content: '한국산업안전보건공단에서 제공하는 "' + keyword + '" 기술지침 검색 결과입니다.',
+                    link: 'https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10'
                 });
             }
 
@@ -448,51 +450,52 @@
             renderLawGrid('guide-content', matchedGuides, keyword);
         }
 
+        // ✅ 정규식 오류 수정: new RegExp 문자열 방식으로 안전하게 처리
         function highlight(text, keyword) {
             if (!text) return "";
-            const escapedKw = keyword.replace(/[.*+?^${}()|[\]
-\\]
-/g, '\\$&');
-            const regex = new RegExp(`(${escapedKw})`, "gi");
+            const escapeRe = new RegExp("[.*+?^${}()|\
+\[\\]
+\\\\]
+", "g");
+            const escapedKw = String(keyword).replace(escapeRe, "\\$&");
+            const regex = new RegExp("(" + escapedKw + ")", "gi");
             return String(text).replace(regex, "<span class='highlight'>$1</span>");
         }
 
         function renderQaGrid(elementId, items, keyword) {
             const container = document.getElementById(elementId);
             if (items.length === 0) {
-                container.innerHTML = `<div class="col-12 text-center p-4 text-muted"><i class="fas fa-info-circle me-2"></i>"${keyword}"에 대한 질의회시 결과가 없습니다.</div>`;
+                container.innerHTML = '<div class="col-12 text-center p-4 text-muted"><i class="fas fa-info-circle me-2"></i>"' + keyword + '"에 대한 질의회시 결과가 없습니다.</div>';
                 return;
             }
             let html = '';
             items.forEach(item => {
-                html += `
-                    <div class="col-lg-6 col-md-12 mb-4">
-                        <div class="result-card" style="border-top-color:#00b050;">
-                            <div class="category-badge badge-qa-custom"><i class="fas fa-file-signature me-1"></i>${item.category}</div>
-                            <div class="result-title" style="color:#004280;">Q. ${highlight(item.question, keyword)}</div>
-                            <div class="result-content"><strong style="color:#00834e; font-size:1.2rem;">A.</strong> ${highlight(item.answer, keyword)}
-                                ${item.source ? `<div class="mt-3 text-muted" style="font-size:0.9rem; border-top: 1px solid #e0e0e0; padding-top: 8px;"><i class="fas fa-bookmark me-1"></i>출처: ${item.source}</div>` : ''}
-                            </div>
-                        </div>
-                    </div>`;
+                html += '<div class="col-lg-6 col-md-12 mb-4">' +
+                    '<div class="result-card" style="border-top-color:#00b050;">' +
+                        '<div class="category-badge badge-qa-custom"><i class="fas fa-file-signature me-1"></i>' + item.category + '</div>' +
+                        '<div class="result-title" style="color:#004280;">Q. ' + highlight(item.question, keyword) + '</div>' +
+                        '<div class="result-content"><strong style="color:#00834e; font-size:1.2rem;">A.</strong> ' + highlight(item.answer, keyword) +
+                            (item.source ? '<div class="mt-3 text-muted" style="font-size:0.9rem; border-top: 1px solid #e0e0e0; padding-top: 8px;"><i class="fas fa-bookmark me-1"></i>출처: ' + item.source + '</div>' : '') +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
             });
             container.innerHTML = html;
         }
 
         function renderLawGrid(elementId, items, keyword) {
             const container = document.getElementById(elementId);
-            if (items.length === 0) { container.innerHTML = `<div class="col-12 text-center p-4 text-muted">결과가 없습니다.</div>`; return; }
+            if (items.length === 0) { container.innerHTML = '<div class="col-12 text-center p-4 text-muted">결과가 없습니다.</div>'; return; }
             let html = '';
             items.forEach(item => {
                 const badgeClass = item.category_name.includes("중대재해") ? "category-badge badge-danger-custom" : "category-badge";
-                html += `
-                    <div class="col-lg-6 col-md-12 mb-4">
-                        <div class="result-card">
-                            <div class="${badgeClass}">${item.category_name}</div>
-                            <div class="result-title"><a href="${item.link}" target="_blank" class="law-link">${highlight(item.title, keyword)} <i class="fas fa-external-link-alt ms-1" style="font-size: 0.9rem;"></i></a></div>
-                            <div class="result-content">${highlight(item.content, keyword)}</div>
-                        </div>
-                    </div>`;
+                html += '<div class="col-lg-6 col-md-12 mb-4">' +
+                    '<div class="result-card">' +
+                        '<div class="' + badgeClass + '">' + item.category_name + '</div>' +
+                        '<div class="result-title"><a href="' + item.link + '" target="_blank" class="law-link">' + highlight(item.title, keyword) + ' <i class="fas fa-external-link-alt ms-1" style="font-size: 0.9rem;"></i></a></div>' +
+                        '<div class="result-content">' + highlight(item.content, keyword) + '</div>' +
+                    '</div>' +
+                '</div>';
             });
             container.innerHTML = html;
         }
@@ -510,6 +513,7 @@
         }
         function showHome() { document.getElementById('homeArea').style.display = 'block'; document.getElementById('resultArea').style.display = 'none'; document.getElementById('qnaArea').style.display = 'none'; }
         function showQnA() { document.getElementById('homeArea').style.display = 'none'; document.getElementById('resultArea').style.display = 'none'; document.getElementById('qnaArea').style.display = 'block'; }
+        function submitQuestion() { alert('질문이 등록되었습니다.'); }
     </script>
 </body>
 </html>
