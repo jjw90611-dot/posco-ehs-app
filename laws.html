@@ -23,7 +23,6 @@
         .navbar-brand { font-weight: 900; color: white !important; font-size: 1.8rem; letter-spacing: -1px; text-decoration: none; }
         .nav-btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 8px 18px; margin-left: 8px; font-size: 1rem; transition: 0.3s; text-decoration: none; font-weight: 700; }
         .nav-btn:hover { background: white; color: #004280; }
-        .visit-badge { background-color: rgba(255,255,255,0.2); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.95rem; font-weight: bold; margin-right: 10px; display: inline-flex; align-items: center; border: 1px solid rgba(255,255,255,0.3); }
 
         .search-section { padding: 40px 0; text-align: center; }
         .search-box { max-width: 800px; margin: 0 auto; position: relative; }
@@ -83,13 +82,6 @@
                 <a href="dashboard.html" class="nav-btn me-2" style="background:#002b54; border-color:#93c5fd;">
                     <i class="fas fa-arrow-left me-1"></i> 대시보드
                 </a>
-                <span class="visit-badge">
-                    <i class="fas fa-users me-1"></i>
-                    <span style="color: #ffeb3b; font-size: 0.85rem; margin-right: 4px;">Today</span>
-                    <span id="visitToday">1</span>
-                    <span style="color: #81d4fa; font-size: 0.85rem; margin: 0 4px 0 8px;">Total</span>
-                    <span id="visitTotal">128</span>
-                </span>
                 <button class="nav-btn" onclick="showQnA()"><i class="fas fa-comments me-1"></i>법규 Q&A</button>
                 <button class="nav-btn" onclick="showHome()"><i class="fas fa-home me-1"></i>홈</button>
             </div>
@@ -204,7 +196,8 @@
         // =========================================================
         // 🔑 공공데이터포털 인증키 및 카테고리 매핑 로직
         // =========================================================
-        const API_AUTH_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
+        // ★ 요청하신 Decoding 키 적용 완료
+        const KOSHA_API_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
 
         const CAT_INFO = {
             "8":  { name: "중대재해 처벌법",            search_name: "중대재해 처벌 등에 관한 법률",       priority: 1 },
@@ -222,7 +215,6 @@
         // =========================================================
         window.onload = function() {
             displayRandomQuote();
-            updateVisitCount();
             renderQnaList();
             document.getElementById('dbStatus').innerHTML = `<i class="fas fa-check-circle me-1"></i> 실시간 법령 데이터베이스 연결 완료`;
             document.getElementById('dbStatus').style.background = '#e6f7ec';
@@ -230,12 +222,13 @@
         };
 
         // =========================================================
-        // 🔍 실시간 검색 로직 (타임아웃 및 에러 방어 코드 추가)
+        // 🔍 실시간 검색 로직 (에러 발생 시 무조건 다음 화면으로 넘어가도록 finally 적용)
         // =========================================================
         async function search() {
             const keyword = document.getElementById('searchInput').value.trim();
             if (!keyword) { alert('검색어를 입력해주세요.'); return; }
 
+            // 1. 기존 화면 숨기고 로딩 화면 표시
             document.getElementById('homeArea').style.display = 'none';
             document.getElementById('qnaArea').style.display = 'none';
             document.getElementById('resultArea').style.display = 'none';
@@ -244,127 +237,131 @@
             let matchedLaws = [];
             let matchedGuides = [];
 
-            // 사내망 방화벽 무한 로딩 방지를 위한 5초 타임아웃 설정
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-
             try {
-                const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=${API_AUTH_KEY}&pageNo=1&numOfRows=100&searchValue=${encodeURIComponent(keyword)}&category=0&type=json&_type=json`;
+                // 사내망 방화벽 무한 로딩 방지를 위한 5초 타임아웃 설정
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                // Decoding 키를 안전하게 인코딩하여 URL에 삽입
+                const encodedKey = encodeURIComponent(KOSHA_API_KEY);
+                const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=${encodedKey}&pageNo=1&numOfRows=100&searchValue=${encodeURIComponent(keyword)}&category=0&type=json&_type=json`;
                 
-                const response = await fetch(apiUrl, { signal: controller.signal });
-                clearTimeout(timeoutId); 
-                
-                if (response.ok) {
-                    const textData = await response.text();
-                    try {
-                        const data = JSON.parse(textData);
-                        const body = data.response?.body || {};
-                        let itemList = body.items?.item || [];
-                        if (!Array.isArray(itemList)) itemList = [itemList];
+                try {
+                    const response = await fetch(apiUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId); 
+                    
+                    if (response.ok) {
+                        const textData = await response.text();
+                        try {
+                            const data = JSON.parse(textData);
+                            const body = data.response?.body || {};
+                            let itemList = body.items?.item || [];
+                            if (!Array.isArray(itemList)) itemList = [itemList];
 
-                        itemList.forEach(item => {
-                            const catId = String(item.category || "");
-                            const title = (item.title || "제목 없음").replace(/<[^>]+>/g, "");
-                            let content = (item.highlight_content || item.content || "").replace(/<[^>]+>/g, "");
+                            itemList.forEach(item => {
+                                const catId = String(item.category || "");
+                                const title = (item.title || "제목 없음").replace(/<[^>]+>/g, "");
+                                let content = (item.highlight_content || item.content || "").replace(/<[^>]+>/g, "");
 
-                            if (CAT_INFO[catId]) {
-                                const catObj = CAT_INFO[catId];
-                                const searchName = catObj.search_name;
-                                
-                                const articleMatch = title.match(/제(\d+)조(?:의(\d+))?/);
-                                let lawLink = "";
+                                if (CAT_INFO[catId]) {
+                                    const catObj = CAT_INFO[catId];
+                                    const searchName = catObj.search_name;
+                                    
+                                    const articleMatch = title.match(/제(\d+)조(?:의(\d+))?/);
+                                    let lawLink = "";
 
-                                if (searchName) {
-                                    if (articleMatch) {
-                                        const joNo = articleMatch[1];
-                                        const joBrNo = articleMatch[2];
-                                        lawLink = joBrNo 
-                                            ? `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조의${joBrNo}`
-                                            : `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조`;
+                                    if (searchName) {
+                                        if (articleMatch) {
+                                            const joNo = articleMatch[1];
+                                            const joBrNo = articleMatch[2];
+                                            lawLink = joBrNo 
+                                                ? `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조의${joBrNo}`
+                                                : `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}/제${joNo}조`;
+                                        } else {
+                                            lawLink = `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}`;
+                                        }
                                     } else {
-                                        lawLink = `https://www.law.go.kr/법령/${encodeURIComponent(searchName)}`;
+                                        lawLink = `https://www.law.go.kr/admRulSc.do?menuId=5&subMenuId=41&query=${encodeURIComponent(title)}`;
                                     }
-                                } else {
-                                    lawLink = `https://www.law.go.kr/admRulSc.do?menuId=5&subMenuId=41&query=${encodeURIComponent(title)}`;
+
+                                    let customPriority = catObj.priority;
+
+                                    if (keyword === "난간" && catObj.name === "산업안전보건기준에 관한 규칙" && title.includes("제13조")) {
+                                        customPriority = -1;
+                                    }
+                                    if (keyword === "매뉴얼" && catObj.name === "중대재해 처벌법 시행령" && title.includes("제4조")) {
+                                        customPriority = -1;
+                                        content = "8. 사업 또는 사업장에 중대산업재해가 발생하거나 발생할 급박한 위험이 있을 경우를 대비하여 다음 각 목의 조치에 관한 매뉴얼을 마련하고, 해당 매뉴얼에 따라 조치하는지를 반기 1회 이상 점검할 것\n가. 작업 중지, 근로자 대피, 위험요인 제거 등 대응조치\n나. 중대산업재해를 입은 사람에 대한 구호조치\n다. 추가 피해방지를 위한 조치";
+                                    }
+
+                                    matchedLaws.push({
+                                        category_name: catObj.name,
+                                        title: title,
+                                        content: content,
+                                        priority: customPriority,
+                                        link: lawLink
+                                    });
+
+                                } else if (catId === "7") {
+                                    matchedGuides.push({
+                                        category_name: "안전보건 기술지침",
+                                        title: title,
+                                        content: content,
+                                        link: "https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10"
+                                    });
+                                } else if (catId === "6") {
+                                    matchedGuides.push({
+                                        category_name: item.media_style || "미디어",
+                                        title: title,
+                                        content: "안전보건 기술미디어 자료입니다.",
+                                        link: item.filepath || "https://www.kosha.or.kr"
+                                    });
                                 }
+                            });
 
-                                let customPriority = catObj.priority;
-
-                                if (keyword === "난간" && catObj.name === "산업안전보건기준에 관한 규칙" && title.includes("제13조")) {
-                                    customPriority = -1;
-                                }
-                                if (keyword === "매뉴얼" && catObj.name === "중대재해 처벌법 시행령" && title.includes("제4조")) {
-                                    customPriority = -1;
-                                    content = "8. 사업 또는 사업장에 중대산업재해가 발생하거나 발생할 급박한 위험이 있을 경우를 대비하여 다음 각 목의 조치에 관한 매뉴얼을 마련하고, 해당 매뉴얼에 따라 조치하는지를 반기 1회 이상 점검할 것\n가. 작업 중지, 근로자 대피, 위험요인 제거 등 대응조치\n나. 중대산업재해를 입은 사람에 대한 구호조치\n다. 추가 피해방지를 위한 조치";
-                                }
-
-                                matchedLaws.push({
-                                    category_name: catObj.name,
-                                    title: title,
-                                    content: content,
-                                    priority: customPriority,
-                                    link: lawLink
-                                });
-
-                            } else if (catId === "7") {
-                                matchedGuides.push({
-                                    category_name: "안전보건 기술지침",
-                                    title: title,
-                                    content: content,
-                                    link: "https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10"
-                                });
-                            } else if (catId === "6") {
-                                matchedGuides.push({
-                                    category_name: item.media_style || "미디어",
-                                    title: title,
-                                    content: "안전보건 기술미디어 자료입니다.",
-                                    link: item.filepath || "https://www.kosha.or.kr"
-                                });
-                            }
-                        });
-
-                        matchedLaws.sort((a, b) => a.priority - b.priority);
-                    } catch (parseErr) {
-                        console.warn("API 응답 파싱 오류 발생", parseErr);
+                            matchedLaws.sort((a, b) => a.priority - b.priority);
+                        } catch (parseErr) {
+                            console.warn("API 응답 파싱 오류 발생", parseErr);
+                        }
                     }
+                } catch (fetchErr) {
+                    clearTimeout(timeoutId);
+                    console.warn("DB 호출 실패 또는 네트워크 차단:", fetchErr);
                 }
             } catch (err) {
-                clearTimeout(timeoutId);
-                if (err.name === 'AbortError') {
-                    console.warn("DB 응답 시간 초과 (사내 망 방화벽 차단 가능성)");
-                } else {
-                    console.warn("DB 호출 실패 또는 네트워크 차단:", err);
+                console.error("검색 중 예기치 않은 오류:", err);
+            } finally {
+                // ★ finally 블록: 에러가 나든 성공하든 무조건 실행되어 다음 화면으로 넘어감
+                
+                // API 호출 실패 또는 결과가 없을 경우 백업 링크 무조건 제공
+                if (matchedLaws.length === 0) {
+                    matchedLaws.push({
+                        category_name: "국가법령정보센터 (직접 검색)",
+                        title: `"${keyword}" 관련 법령 검색 결과 확인하기`,
+                        content: `사내망 보안 정책 또는 서버 지연으로 실시간 데이터를 불러오지 못했습니다.\n클릭 시 국가법령정보센터에서 "${keyword}"와 관련된 법조문을 직접 확인하실 수 있습니다.`,
+                        link: `https://www.law.go.kr/lsSc.do?query=${encodeURIComponent(keyword)}`
+                    });
                 }
+
+                if (matchedGuides.length === 0) {
+                    matchedGuides.push({
+                        category_name: "안전보건 기술지침 (직접 검색)",
+                        title: `"${keyword}" 관련 기술지침 검색 확인하기`,
+                        content: `"${keyword}" 관련 기술지침 검색 결과 페이지로 이동합니다.`,
+                        link: `https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10`
+                    });
+                }
+
+                // 로딩 숨기고 결과창 표시 (화면 전환 보장)
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('resultArea').style.display = 'block';
+
+                document.getElementById('cnt-law').innerText = matchedLaws.length + '건';
+                document.getElementById('cnt-guide').innerText = matchedGuides.length + '건';
+
+                renderLawGrid('law-content', matchedLaws, keyword);
+                renderLawGrid('guide-content', matchedGuides, keyword);
             }
-
-            // API 호출 실패 또는 결과가 없을 경우 백업 링크 무조건 제공
-            if (matchedLaws.length === 0) {
-                matchedLaws.push({
-                    category_name: "국가법령정보센터 (직접 검색)",
-                    title: `"${keyword}" 관련 법령 검색 결과 확인하기`,
-                    content: `사내망 보안 정책 또는 서버 지연으로 실시간 데이터를 불러오지 못했습니다.\n클릭 시 국가법령정보센터에서 "${keyword}"와 관련된 법조문을 직접 확인하실 수 있습니다.`,
-                    link: `https://www.law.go.kr/lsSc.do?query=${encodeURIComponent(keyword)}`
-                });
-            }
-
-            if (matchedGuides.length === 0) {
-                matchedGuides.push({
-                    category_name: "안전보건 기술지침 (직접 검색)",
-                    title: `"${keyword}" 관련 기술지침 검색 확인하기`,
-                    content: `"${keyword}" 관련 기술지침 검색 결과 페이지로 이동합니다.`,
-                    link: `https://portal.kosha.or.kr/archive/resources/tech-support/search/all?page=1&rowsPerPage=10`
-                });
-            }
-
-            // 로딩 숨기고 결과창 표시
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('resultArea').style.display = 'block';
-
-            document.getElementById('cnt-law').innerText = matchedLaws.length + '건';
-            document.getElementById('cnt-guide').innerText = matchedGuides.length + '건';
-
-            renderLawGrid('law-content', matchedLaws, keyword);
-            renderLawGrid('guide-content', matchedGuides, keyword);
         }
 
         function highlight(text, keyword) {
@@ -460,13 +457,6 @@
         
         function displayRandomQuote() { 
             document.getElementById('dailyQuote').innerText = safetyQuotes[Math.floor(Math.random() * safetyQuotes.length)]; 
-        }
-        
-        function updateVisitCount() {
-            let today = parseInt(localStorage.getItem('posco_visit_today') || 1);
-            let total = parseInt(localStorage.getItem('posco_visit_total') || 128);
-            document.getElementById('visitToday').innerText = today;
-            document.getElementById('visitTotal').innerText = total;
         }
         
         function showHome() { 
