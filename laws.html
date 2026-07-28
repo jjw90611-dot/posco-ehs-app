@@ -71,7 +71,6 @@
             .campaign-footer { font-size: 1.3rem; }
         }
     </style>
-    <script src="safety_qa_data.js"></script>
 </head>
 <body oncontextmenu="return false;" onselectstart="return false;" ondragstart="return false;">
 
@@ -104,7 +103,7 @@
                 <button onclick="search()"><i class="fas fa-search me-2"></i>검색</button>
             </div>
             <div class="db-status" id="dbStatus">
-                <i class="fas fa-database me-1"></i> 준비 완료
+                <i class="fas fa-database me-1"></i> 안전보건공단 API 준비 완료
             </div>
         </div>
     </div>
@@ -164,12 +163,11 @@
 
         <div id="loading" style="display: none; text-align: center; padding: 60px 0;">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-            <h5 class="mt-3 text-primary fw-bold">안전보건공단 API 및 DB에서 실시간 검색 중...</h5>
+            <h5 class="mt-3 text-primary fw-bold">안전보건공단 API에서 실시간 검색 중...</h5>
         </div>
 
         <div id="resultArea" style="display: none;">
-            <div class="section-title"><i class="fas fa-comments-dollar me-2"></i>고용노동부 질의회시집 <span class="badge-count" id="cnt-qa">0</span></div>
-            <div class="row" id="qa-content"></div>
+            <!-- 고용노동부 질의회시집 섹션 삭제됨 -->
 
             <div class="section-title"><i class="fas fa-gavel me-2"></i>산업안전보건법 및 관계 법령 (실시간 API) <span class="badge-count" id="cnt-law">0</span></div>
             <div class="row" id="law-content"></div>
@@ -221,88 +219,16 @@
         };
 
         // =========================================================
-        // 📄 CSV 파싱 엔진 (safety_qa_data.js 연동)
-        // =========================================================
-        let PARSED_SAFETY_QA = [];
-
-        function parseCSVText(csvString) {
-            if (!csvString) return [];
-            const result = [];
-            let row = [];
-            let inQuotes = false;
-            let currentStr = '';
-
-            for (let i = 0; i < csvString.length; i++) {
-                const char = csvString[i];
-                const nextChar = csvString[i + 1];
-
-                if (char === '"') {
-                    if (inQuotes && nextChar === '"') {
-                        currentStr += '"';
-                        i++;
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === ',' && !inQuotes) {
-                    row.push(currentStr.trim());
-                    currentStr = '';
-                } else if ((char === '\r' || char === '\n') && !inQuotes) {
-                    if (char === '\r' && nextChar === '\n') { i++; }
-                    row.push(currentStr.trim());
-                    if (row.length > 1 && row.some(col => col !== '')) {
-                        result.push(row);
-                    }
-                    row = [];
-                    currentStr = '';
-                } else {
-                    currentStr += char;
-                }
-            }
-            if (currentStr || row.length > 0) {
-                row.push(currentStr.trim());
-                if (row.length > 1) result.push(row);
-            }
-
-            const parsedObjects = [];
-            for (let i = 1; i < result.length; i++) {
-                const r = result[i];
-                if (r.length >= 6) {
-                    parsedObjects.push({
-                        num: r[0] || i,
-                        chapter: r[1] || '',
-                        section: r[2] || '',
-                        title: r[3] || '',
-                        q: r[4] || '',
-                        a: r[5] || '',
-                        source: r[6] || ''
-                    });
-                }
-            }
-            return parsedObjects;
-        }
-
-        // =========================================================
         // 🚀 초기화
         // =========================================================
         window.onload = function() {
             displayRandomQuote();
             updateVisitCount();
-            initDatabase();
+            // 질의회시집 관련 초기화 로직 제거
+            document.getElementById('dbStatus').innerHTML = `<i class="fas fa-check-circle me-1"></i> 안전보건공단 API 준비 완료`;
+            document.getElementById('dbStatus').style.background = '#e6f7ec';
+            document.getElementById('dbStatus').style.color = '#00834e';
         };
-
-        function initDatabase() {
-            const statusEl = document.getElementById('dbStatus');
-            try {
-                if (typeof RAW_SAFETY_QA_CSV !== 'undefined' && RAW_SAFETY_QA_CSV.trim().length > 0) {
-                    PARSED_SAFETY_QA = parseCSVText(RAW_SAFETY_QA_CSV);
-                    statusEl.innerHTML = `<i class="fas fa-check-circle me-1"></i> 공단 API 연동 및 질의회시집 DB <strong>${PARSED_SAFETY_QA.length}건</strong> 준비 완료`;
-                    statusEl.style.background = '#e6f7ec';
-                    statusEl.style.color = '#00834e';
-                }
-            } catch (err) {
-                console.log("CSV 파싱 예외 또는 기본 동작");
-            }
-        }
 
         // =========================================================
         // 🔍 app.py 원본 로직을 자바스크립트로 구현한 통합 검색
@@ -318,24 +244,11 @@
 
             let matchedLaws = [];
             let matchedGuides = [];
-            let matchedQas = [];
+            // let matchedQas = []; // 질의회시집 관련 변수 제거
 
             const kwLower = keyword.toLowerCase();
 
-            // 1) CSV 질의회시집 검색 (app.py의 safety_qa DB 검색 기능)
-            PARSED_SAFETY_QA.forEach(item => {
-                const fullText = [item.title, item.q, item.a, item.chapter, item.section, item.source].join(' ').toLowerCase();
-                if (fullText.includes(kwLower)) {
-                    matchedQas.push({
-                        category: `${item.chapter} > ${item.section}`,
-                        question: `[${item.num}] ${item.title}${item.q ? ' - ' + item.q : ''}`,
-                        answer: item.a,
-                        source: item.source
-                    });
-                }
-            });
-
-            // 2) 안전보건공단 API (app.py의 smartSearch API 구현)
+            // 1) 안전보건공단 API (app.py의 smartSearch API 구현)
             try {
                 const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch?serviceKey=${KOSHA_API_KEY}&pageNo=1&numOfRows=100&searchValue=${encodeURIComponent(keyword)}&category=0&type=json&_type=json`;
                 const response = await fetch(apiUrl);
@@ -439,43 +352,25 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('resultArea').style.display = 'block';
 
-            document.getElementById('cnt-qa').innerText = matchedQas.length + '건';
+            // document.getElementById('cnt-qa').innerText = matchedQas.length + '건'; // 질의회시집 카운트 제거
             document.getElementById('cnt-law').innerText = matchedLaws.length + '건';
             document.getElementById('cnt-guide').innerText = matchedGuides.length + '건';
 
-            renderQaGrid('qa-content', matchedQas, keyword);
+            // renderQaGrid('qa-content', matchedQas, keyword); // 질의회시집 렌더링 제거
             renderLawGrid('law-content', matchedLaws, keyword);
             renderLawGrid('guide-content', matchedGuides, keyword);
         }
 
         function highlight(text, keyword) {
             if (!text) return "";
-            const escapedKw = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedKw = keyword.replace(/[.*+?^${}()|[\]
+\\]
+/g, '\\$&');
             const regex = new RegExp(`(${escapedKw})`, "gi");
             return String(text).replace(regex, "<span class='highlight'>$1</span>");
         }
 
-        function renderQaGrid(elementId, items, keyword) {
-            const container = document.getElementById(elementId);
-            if (items.length === 0) {
-                container.innerHTML = `<div class="col-12 text-center p-4 text-muted"><i class="fas fa-info-circle me-2"></i>"${keyword}"에 대한 질의회시 결과가 없습니다.</div>`;
-                return;
-            }
-            let html = '';
-            items.forEach(item => {
-                html += `
-                    <div class="col-lg-6 col-md-12 mb-4">
-                        <div class="result-card" style="border-top-color:#00b050;">
-                            <div class="category-badge badge-qa-custom"><i class="fas fa-file-signature me-1"></i>${item.category}</div>
-                            <div class="result-title" style="color:#004280;">Q. ${highlight(item.question, keyword)}</div>
-                            <div class="result-content"><strong style="color:#00834e; font-size:1.2rem;">A.</strong> ${highlight(item.answer, keyword)}
-                                ${item.source ? `<div class="mt-3 text-muted" style="font-size:0.9rem; border-top: 1px solid #e0e0e0; padding-top: 8px;"><i class="fas fa-bookmark me-1"></i>출처: ${item.source}</div>` : ''}
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
+        // renderQaGrid 함수 제거됨
 
         function renderLawGrid(elementId, items, keyword) {
             const container = document.getElementById(elementId);
