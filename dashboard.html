@@ -112,13 +112,15 @@
                     <p class="text-xs text-gray-500 mt-1">중대재해처벌법, 산업안전보건법 및 포스코퓨처엠 안전 표준 가이드</p>
                 </a>
 
-                <!-- 메뉴 3: 위험성평가(JSA) -->
-                <a href="#" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                <!-- 메뉴 3: 위험성평가(JSA) ★ 링크 연결 + 알림 배지 추가 -->
+                <a href="risk-assessment.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-500 transition group cursor-pointer relative">
+                    <!-- 미처리 알림 배지 (예정일경과 + 승인대기) -->
+                    <span class="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse" title="예정일경과 3건, 승인대기 8건">11</span>
                     <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-purple-600 group-hover:text-white transition">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                     </div>
                     <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-purple-600">위험성평가 (JSA)</h3>
-                    <p class="text-xs text-gray-500 mt-1">작업 단위별 위험요인 도출 및 감소대책 수립 관리</p>
+                    <p class="text-xs text-gray-500 mt-1">작업표준 기반 위험요인 도출·위험도 산정 및 개선대책 수립 관리</p>
                 </a>
 
                 <!-- 메뉴 4: 안전점검 및 아차사고 -->
@@ -149,6 +151,14 @@
                         <span class="font-medium text-gray-800">[필수] 하절기 폭염 대비 온열질환 예방 수칙 준수의 건</span>
                     </div>
                     <span class="text-xs text-gray-400">2024.05.20</span>
+                </li>
+                <!-- ★ 위험성평가 공지 추가 -->
+                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded">평가</span>
+                        <span class="font-medium text-gray-800">2024년 정기 위험성평가 실시 계획 안내 (5.1 ~ 6.30)</span>
+                    </div>
+                    <span class="text-xs text-gray-400">2024.05.19</span>
                 </li>
                 <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
                     <div class="flex items-center space-x-3">
