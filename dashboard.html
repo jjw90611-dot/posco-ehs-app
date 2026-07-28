@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>포스코퓨처엠 - 통합안전 메인 대시보드</title>
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 min-h-screen text-gray-800">
+
+    <!-- 상단 네비게이션 바 -->
+    <nav class="bg-[#00529C] text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- 로고 영역 -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="location.href='dashboard.html'">
+                    <i class="fa-solid fa-shield-halved text-2xl text-blue-300"></i>
+                    <span class="font-black text-xl tracking-wider">POSCO <span class="font-light">FUTURE M</span></span>
+                    <span class="bg-blue-800 text-xs px-2.5 py-1 rounded-full font-medium">EHS Portal</span>
+                </div>
+
+                <!-- 사용자 프로필 및 로그아웃 -->
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold">홍길동 안전관리자</p>
+                        <p class="text-xs text-blue-200">광양 양극재 생산기술그룹</p>
+                    </div>
+                    <a href="index.html" class="bg-blue-800 hover:bg-blue-900 text-xs font-semibold px-3 py-2 rounded-lg border border-blue-600 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>로그아웃</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- 1. 무재해 달성 및 주요 안전 현황 KPI 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+            <!-- 무재해 일수 -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-emerald-500 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 uppercase">사업장 무재해 달성</p>
+                    <p class="text-3xl font-black text-emerald-600 mt-1">365<span class="text-lg font-bold text-gray-600"> 일</span></p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-xl">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+            </div>
+
+            <!-- 금일 위험작업 허가(PTW) -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 uppercase">금일 작업허가서(PTW)</p>
+                    <p class="text-3xl font-black text-amber-600 mt-1">12<span class="text-lg font-bold text-gray-600"> 건 진행중</span></p>
+                </div>
+                <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+            </div>
+
+            <!-- 밀폐공간 작업 현황 -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 uppercase">밀폐공간 출입 현황</p>
+                    <p class="text-3xl font-black text-blue-600 mt-1">3<span class="text-lg font-bold text-gray-600"> 개소 작업중</span></p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xl">
+                    <i class="fa-solid fa-[#00529C] fa-mask-ventilator"></i>
+                </div>
+            </div>
+
+            <!-- TBM 실시율 -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-indigo-500 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 uppercase">금일 TBM 실시율</p>
+                    <p class="text-3xl font-black text-indigo-600 mt-1">100<span class="text-lg font-bold text-gray-600"> %</span></p>
+                </div>
+                <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-xl">
+                    <i class="fa-solid fa-users-gear"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 주요 핵심 메뉴 바로가기 -->
+        <div>
+            <h2 class="text-lg font-black text-gray-800 mb-4 flex items-center space-x-2">
+                <i class="fa-solid fa-layer-group text-[#00529C]"></i>
+                <span>안전관리 핵심 솔루션</span>
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- 메뉴 1: 밀폐공간 안전관리 -->
+                <a href="confined-space.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                    <div class="w-12 h-12 bg-blue-50 text-[#00529C] rounded-lg flex items-center justify-center text-2xl group-hover:bg-[#00529C] group-hover:text-white transition">
+                        <i class="fa-solid fa-door-closed"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-[#00529C]">밀폐공간 안전관리</h3>
+                    <p class="text-xs text-gray-500 mt-1">산소/유해가스 농도 측정 기록, 작업 허가서 작성 및 실시간 모니터링</p>
+                </a>
+
+                <!-- 메뉴 2: 안전보건 법적 기준 조회 -->
+                <a href="laws.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-emerald-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-emerald-600">안전보건 법령·지침 검색</h3>
+                    <p class="text-xs text-gray-500 mt-1">중대재해처벌법, 산업안전보건법 및 포스코퓨처엠 안전 표준 가이드</p>
+                </a>
+
+                <!-- 메뉴 3: 위험성평가(JSA) -->
+                <a href="#" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                    <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-purple-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-purple-600">위험성평가 (JSA)</h3>
+                    <p class="text-xs text-gray-500 mt-1">작업 단위별 위험요인 도출 및 감소대책 수립 관리</p>
+                </a>
+
+                <!-- 메뉴 4: 안전점검 및 아차사고 -->
+                <a href="#" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                    <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-rose-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-rose-600">아차사고 / 불안전요인 신고</h3>
+                    <p class="text-xs text-gray-500 mt-1">현장 불안전 상태 촬영 및 즉시 개선 조치 요청</p>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- 3. 실시간 안전 전달사항 및 최근 공지 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-bold text-gray-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-bell text-amber-500"></i>
+                    <span>EHS 안전보건 최근 공지</span>
+                </h2>
+                <span class="text-xs text-gray-400">최근 업데이트: 오늘 08:30</span>
+            </div>
+            <ul class="divide-y divide-gray-100 text-sm">
+                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-0.5 rounded">중요</span>
+                        <span class="font-medium text-gray-800">[필수] 하절기 폭염 대비 온열질환 예방 수칙 준수의 건</span>
+                    </div>
+                    <span class="text-xs text-gray-400">2024.05.20</span>
+                </li>
+                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="bg-blue-100 text-[#00529C] text-xs font-bold px-2 py-0.5 rounded">공지</span>
+                        <span class="font-medium text-gray-800">양극재 2공장 밀폐공간 가스검지기 정기 교정 실시 안내</span>
+                    </div>
+                    <span class="text-xs text-gray-400">2024.05.18</span>
+                </li>
+                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded">점검</span>
+                        <span class="font-medium text-gray-800">5월 특별 안전보건 점검 결과 및 우수 부서 포상</span>
+                    </div>
+                    <span class="text-xs text-gray-400">2024.05.15</span>
+                </li>
+            </ul>
+        </div>
+
+    </main>
+</body>
+</html>
