@@ -1931,17 +1931,31 @@
 
         // ⭐⭐⭐ MSDS 3번 항목 자동 추출
         const composition = extractComposition(pdfText);
-        base.composition = composition.items;
-        base.compositionSum = composition.sum;
-        base.compositionValid = composition.valid;
-        base.compositionWarnings = composition.warnings;
+
+        // ⭐ [핵심 개선] PDF 파싱이 실패했지만 지식베이스 매칭 신뢰도가 높으면
+        // 지식베이스의 표준 구성성분으로 자동 대체
+        const kbHasComposition = matched && best.kb.template.composition && best.kb.template.composition.length > 0;
+        const pdfParseFailed = !composition.valid || composition.items.length === 0 || composition.sum === 0;
+
+        if(kbHasComposition && pdfParseFailed && best.score >= 80){
+            base.composition = JSON.parse(JSON.stringify(best.kb.template.composition));
+            base.compositionSum = base.composition.reduce((s,c)=>s+(c.contentNum||0), 0);
+            base.compositionValid = true;
+            base.compositionWarnings = ['ℹ️ PDF 텍스트 추출 실패 → AI 지식베이스 표준 성분으로 자동 대체됨 (검수 후 등록 권장)'];
+            base.compositionRawText = composition.rawText || '(PDF 3번 항목 추출 실패)';
+        } else {
+            base.composition = composition.items;
+            base.compositionSum = composition.sum;
+            base.compositionValid = composition.valid;
+            base.compositionWarnings = composition.warnings;
+            base.compositionRawText = composition.rawText;
+        }
         base.compositionReviewed = false;
-        base.compositionRawText = composition.rawText;
 
         return base;
     }
 
-    /* ⭐⭐⭐ [신규] MSDS 3번 「구성성분의 명칭 및 함유량」 자동 추출 */
+    /* ⭐⭐⭐ [신규/개선] MSDS 3번 「구성성분의 명칭 및 함유량」 자동 추출 (정확도 대폭 향상) */
     function extractComposition(pdfText){
         const result = {
             items: [],
@@ -1956,8 +1970,8 @@
             return result;
         }
 
-        // 3번 구간 추출
-        const section3Regex = /3\s*[\.\)]\s*구성성분[^]*?(?=4\s*[\.\)]\s*(?:응급조치|폭발|화재)|$)/;
+        // 3번 구간 추출 (정규식 개선: 마침표/괄호 선택적, 4번 항목 시작 전까지)
+        const section3Regex = /3\s*[\.\)]?\s*구성성분[^]*?(?=4\s*[\.\)]?\s*(?:응급조치|응급\s*조치|폭발|화재)|$)/i;
         const match = pdfText.match(section3Regex);
 
         if(!match){
@@ -1969,7 +1983,7 @@
         result.rawText = section3.substring(0, 2000);
 
         // CAS 번호 추출
-        const casPattern = /(\d{2,7}-\d{2}-\d)/g;
+        const casPattern = /\b(\d{2,7}-\d{2}-\d)\b/g;
         const casMatches = [...section3.matchAll(casPattern)];
 
         if(casMatches.length === 0){
@@ -1977,37 +1991,75 @@
             return result;
         }
 
-        casMatches.forEach(m=>{
+        casMatches.forEach(m => {
             const cas = m[1];
             const idx = m.index;
 
-            // CAS 앞 80자에서 물질명 추출
-            const before = section3.substring(Math.max(0, idx-80), idx).trim();
-            const nameMatch = before.match(/([가-힣A-Za-z][가-힣A-Za-z0-9\s\-\(\)ㆍ,\.]{1,50})\s*$/);
-            let name = nameMatch ? nameMatch[1].trim() : '(추출실패)';
-            name = name.replace(/^[0-9\.\-\s]+/, '').trim();
+            // ⭐ 1. 물질명 추출 개선 (CAS 앞 100자에서 탐색)
+            let before = section3.substring(Math.max(0, idx - 100), idx);
+            let name = '(추출실패)';
 
-            // CAS 뒤 60자에서 함유량 추출
-            const after = section3.substring(idx + cas.length, idx + cas.length + 60);
-            const contentMatch = after.match(/([<>≥≤]?\s*\d+(?:\.\d+)?(?:\s*[~\-\∼]\s*\d+(?:\.\d+)?)?)\s*%?/);
-            let content = contentMatch ? contentMatch[1].replace(/\s/g,'') : '';
-
-            let contentNum = 0;
-            if(content){
-                const nums = content.match(/\d+(?:\.\d+)?/g);
-                if(nums && nums.length === 2){
-                    contentNum = (parseFloat(nums[0]) + parseFloat(nums[1])) / 2;
-                } else if(nums && nums.length === 1){
-                    contentNum = parseFloat(nums[0]);
+            // 줄바꿈, 2칸 이상 공백, 마침표+공백 기준으로 문장 분리
+            const parts = before.split(/\n|\s{2,}|\.\s/);
+            for (let i = parts.length - 1; i >= 0; i--) {
+                let candidate = parts[i].trim();
+                // 너무 길거나, P코드/안전문구(동사형 어미)가 포함된 문장은 무시
+                if (candidate.length > 0 && candidate.length < 40 &&
+                    !candidate.match(/(시오|하시오|하세요|합니다|위해|방지|조치|흡수|누출물|주의|경고)\s*$/)) {
+                    // 앞뒤 특수문자·숫자 정리
+                    candidate = candidate.replace(/^[^\w가-힣]+|[^\w가-힣\)]+$/g, '').trim();
+                    candidate = candidate.replace(/^[0-9\.\-\s]+/, '').trim();
+                    if(candidate && candidate.length >= 2) {
+                        name = candidate;
+                        break;
+                    }
                 }
             }
 
-            result.items.push({
-                name: name || '(미상)',
-                cas: cas,
-                content: content ? content + '%' : '-',
-                contentNum: contentNum
-            });
+            // ⭐ 2. 함유량 추출 개선 (CAS 뒤 80자에서 탐색, 최대 3자리 숫자만 허용)
+            let after = section3.substring(idx + cas.length, idx + cas.length + 80);
+            let content = '';
+            let contentNum = 0;
+
+            // 패턴 1: 명시적 % 기호 (예: 95%, 90~95%) - 3자리 숫자까지만 허용 (32570% 방지)
+            const pctMatch = after.match(/([<>≥≤]?\s*\d{1,3}(?:\.\d+)?\s*(?:[~\-\∼]\s*\d{1,3}(?:\.\d+)?)?\s*%)/);
+            // 패턴 2: 범위 형태 (예: 95 ~ 98) - %가 없어도 인식
+            const rangeMatch = after.match(/(\d{1,3}(?:\.\d+)?\s*[~\-\∼]\s*\d{1,3}(?:\.\d+)?)/);
+            // 패턴 3: 단일 숫자 (100 이하의 합리적인 값만)
+            const numMatch = after.match(/(?:^|\s)([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)(?=\s|$|%)/);
+
+            if (pctMatch) {
+                content = pctMatch[1].replace(/\s/g, '');
+            } else if (rangeMatch) {
+                content = rangeMatch[1].replace(/\s/g, '') + '%';
+            } else if (numMatch) {
+                const val = parseFloat(numMatch[1].replace(/[<>≥≤]/g, ''));
+                if (val > 0 && val <= 100) {
+                    content = numMatch[1].replace(/\s/g, '') + '%';
+                }
+            }
+
+            // contentNum 계산
+            if (content) {
+                const nums = content.match(/\d+(?:\.\d+)?/g);
+                if (nums && nums.length === 2) {
+                    contentNum = (parseFloat(nums[0]) + parseFloat(nums[1])) / 2;
+                } else if (nums && nums.length === 1) {
+                    contentNum = parseFloat(nums[0]);
+                }
+            } else {
+                content = '-';
+            }
+
+            // ⭐ 중복 CAS 방지
+            if (!result.items.some(it => it.cas === cas)) {
+                result.items.push({
+                    name: name,
+                    cas: cas,
+                    content: content,
+                    contentNum: contentNum
+                });
+            }
         });
 
         result.sum = result.items.reduce((s,it)=>s + it.contentNum, 0);
