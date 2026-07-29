@@ -17,6 +17,11 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.5); }
             50% { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
         }
+        .pulse-blue { animation: pulse-blue 2s infinite; }
+        @keyframes pulse-blue {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+            50% { box-shadow: 0 0 0 12px rgba(59,130,246,0); }
+        }
         .step-line { position: relative; }
         .step-line::after {
             content: ''; position: absolute; top: 50%; right: -50%;
@@ -24,6 +29,12 @@
         }
         .step-line.done::after { background: #10b981; }
         .step-line:last-child::after { display: none; }
+        /* 진입 안내 배너 슬라이드 다운 */
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-down { animation: slideDown 0.4s ease-out; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-gray-800">
@@ -57,29 +68,34 @@
             <nav class="text-xs text-gray-500 mb-2">
                 <a href="dashboard.html" class="hover:text-[#00529C]"><i class="fa-solid fa-house"></i> 홈</a>
                 <span class="mx-2">/</span>
-                <span class="text-gray-700 font-medium">사고/아차사고 신고</span>
+                <a href="dashboard.html#solutions" class="hover:text-[#00529C]">안전관리 핵심 솔루션</a>
+                <span class="mx-2">/</span>
+                <span class="text-gray-700 font-medium">아차사고 / 불안전요인 신고</span>
             </nav>
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 class="text-2xl font-black text-gray-900 flex items-center space-x-2">
                         <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
-                        <span>사고/아차사고 신고</span>
+                        <span>사고 / 아차사고 / 불안전요인 신고</span>
                         <span class="text-sm font-normal bg-rose-100 text-rose-700 px-2 py-0.5 rounded ml-2">
                             <i class="fa-solid fa-circle text-[8px] mr-1 pulse-red"></i>실시간 접수
                         </span>
                     </h1>
                     <p class="text-sm text-gray-500 mt-1">
-                        사고 및 아차사고(Near Miss) 발생 시 즉시 신고 · 위험성평가 자동 연계
+                        현장 불안전 상태 촬영 · 아차사고(Near Miss) 즉시 신고 · 위험성평가 자동 연계
                         <span class="text-gray-400 ml-2">· 근거: 산안법 제57조, 중대재해처벌법 제4조</span>
                     </p>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition">
+                    <a href="dashboard.html" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition flex items-center">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> 대시보드
+                    </a>
+                    <button onclick="openReportModal()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition">
                         <i class="fa-solid fa-qrcode mr-1"></i> 모바일 QR 신고
                     </button>
-                    <button class="bg-white border border-blue-400 hover:bg-blue-50 text-[#00529C] text-sm font-semibold px-4 py-2 rounded-lg transition">
+                    <a href="dashboard.html#stats" class="bg-white border border-blue-400 hover:bg-blue-50 text-[#00529C] text-sm font-semibold px-4 py-2 rounded-lg transition flex items-center">
                         <i class="fa-solid fa-chart-line mr-1"></i> 사고통계 대시보드
-                    </button>
+                    </a>
                     <button onclick="openReportModal()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold px-5 py-2 rounded-lg transition shadow-md pulse-red">
                         <i class="fa-solid fa-bullhorn mr-1"></i> 사고 신속신고
                     </button>
@@ -90,6 +106,24 @@
 
     <!-- 메인 컨텐츠 -->
     <main class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
+        <!-- 🔵 대시보드 진입 안내 배너 (대시보드에서 왔을 때만 자동 표시) -->
+        <div id="entryBanner" class="hidden slide-down bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-4 shadow-lg">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-hand-point-right text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-black">대시보드 "아차사고 / 불안전요인 신고"에서 진입하셨습니다</p>
+                        <p class="text-xs text-blue-100 mt-0.5">신고 모달이 자동으로 열립니다. 현장 상황을 촬영하고 즉시 신고해주세요.</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('entryBanner').classList.add('hidden')" class="text-white hover:bg-white/20 w-8 h-8 rounded-full">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
 
         <!-- 🔴 긴급 알림 배너 (진행중 사고) -->
         <div class="severity-critical rounded-xl p-5 shadow-lg">
@@ -108,7 +142,7 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button class="bg-white text-red-700 hover:bg-red-50 text-sm font-black px-4 py-2 rounded-lg">
+                    <button onclick="openDetailModal()" class="bg-white text-red-700 hover:bg-red-50 text-sm font-black px-4 py-2 rounded-lg">
                         <i class="fa-solid fa-eye mr-1"></i>실시간 대응현황
                     </button>
                     <button class="bg-red-900 hover:bg-red-950 text-white text-sm font-bold px-4 py-2 rounded-lg border border-white/30">
@@ -292,7 +326,7 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-3 text-center"><span class="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded animate-pulse">대응중</span></td>
-                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal()" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
+                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal('INC-2024-0087')" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
                         </tr>
                         <!-- 일반재해 (끼임) -->
                         <tr class="hover:bg-slate-50 border-b border-gray-100">
@@ -312,7 +346,7 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-3 text-center"><span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded">조사중</span></td>
-                            <td class="py-2.5 px-3 text-center"><button class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
+                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal('INC-2024-0086')" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
                         </tr>
                         <!-- 아차사고 (산소결핍) -->
                         <tr class="hover:bg-slate-50 border-b border-gray-100">
@@ -332,7 +366,7 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-3 text-center"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">종결</span></td>
-                            <td class="py-2.5 px-3 text-center"><button class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
+                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal('INC-2024-0085')" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
                         </tr>
                         <!-- 경미사고 (부딪힘) -->
                         <tr class="hover:bg-slate-50 border-b border-gray-100">
@@ -352,7 +386,7 @@
                                 </button>
                             </td>
                             <td class="py-2.5 px-3 text-center"><span class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-1 rounded">대책수립</span></td>
-                            <td class="py-2.5 px-3 text-center"><button class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
+                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal('INC-2024-0084')" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
                         </tr>
                         <!-- 아차사고 (넘어짐) -->
                         <tr class="hover:bg-slate-50 border-b border-gray-100">
@@ -372,7 +406,7 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-3 text-center"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">종결</span></td>
-                            <td class="py-2.5 px-3 text-center"><button class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
+                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal('INC-2024-0083')" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
                         </tr>
                         <!-- 아차사고 (화학물질접촉) -->
                         <tr class="hover:bg-slate-50 border-b border-gray-100">
@@ -392,7 +426,7 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-3 text-center"><span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded">종결</span></td>
-                            <td class="py-2.5 px-3 text-center"><button class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
+                            <td class="py-2.5 px-3 text-center"><button onclick="openDetailModal('INC-2024-0082')" class="text-[#00529C] hover:underline font-bold text-[11px]">상세</button></td>
                         </tr>
                     </tbody>
                 </table>
@@ -593,17 +627,31 @@
             </table>
         </div>
 
+        <!-- 하단 대시보드 복귀 안내 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-circle-info text-[#00529C] text-xl"></i>
+                <div>
+                    <p class="text-sm font-bold text-gray-900">신고가 완료되면 대시보드로 돌아가세요</p>
+                    <p class="text-xs text-gray-500">안전관리 핵심 솔루션의 다른 기능(위험성평가·MSDS·PTW 등)을 이용하실 수 있습니다.</p>
+                </div>
+            </div>
+            <a href="dashboard.html" class="bg-[#00529C] hover:bg-blue-800 text-white text-sm font-bold px-5 py-2 rounded-lg transition flex items-center">
+                <i class="fa-solid fa-house mr-1"></i> 대시보드로 돌아가기
+            </a>
+        </div>
+
     </main>
 
     <!-- ============ 사고 신속신고 모달 ============ -->
     <div id="reportModal" class="fixed inset-0 bg-black/60 z-[100] hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="bg-gradient-to-r from-rose-600 to-red-700 text-white px-6 py-4 flex items-center justify-between">
+            <div id="modalHeader" class="bg-gradient-to-r from-rose-600 to-red-700 text-white px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <i class="fa-solid fa-bullhorn text-2xl"></i>
                     <div>
-                        <h3 class="text-lg font-black">🚨 사고 신속신고</h3>
-                        <p class="text-xs text-red-100">발생 즉시 신고 · 중대재해는 반드시 5분 이내 접수</p>
+                        <h3 id="modalTitle" class="text-lg font-black">🚨 사고 신속신고</h3>
+                        <p id="modalSubtitle" class="text-xs text-red-100">발생 즉시 신고 · 중대재해는 반드시 5분 이내 접수</p>
                     </div>
                 </div>
                 <button onclick="closeReportModal()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full">
@@ -616,7 +664,7 @@
                     <label class="text-xs font-bold text-gray-700 block mb-2">1. 사고 심각도 <span class="text-rose-500">*</span></label>
                     <div class="grid grid-cols-4 gap-2">
                         <label class="cursor-pointer">
-                            <input type="radio" name="severity" class="hidden peer">
+                            <input type="radio" name="severity" value="critical" class="hidden peer">
                             <div class="p-3 border-2 border-gray-200 rounded-lg text-center peer-checked:border-rose-600 peer-checked:bg-rose-50 hover:border-rose-400">
                                 <i class="fa-solid fa-skull-crossbones text-rose-600 text-xl mb-1"></i>
                                 <p class="text-xs font-black text-rose-600">중대재해</p>
@@ -624,7 +672,7 @@
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="severity" class="hidden peer">
+                            <input type="radio" name="severity" value="major" class="hidden peer">
                             <div class="p-3 border-2 border-gray-200 rounded-lg text-center peer-checked:border-orange-500 peer-checked:bg-orange-50 hover:border-orange-400">
                                 <i class="fa-solid fa-user-injured text-orange-500 text-xl mb-1"></i>
                                 <p class="text-xs font-black text-orange-600">일반재해</p>
@@ -632,7 +680,7 @@
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="severity" class="hidden peer">
+                            <input type="radio" name="severity" value="minor" class="hidden peer">
                             <div class="p-3 border-2 border-gray-200 rounded-lg text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:border-amber-400">
                                 <i class="fa-solid fa-bandage text-amber-500 text-xl mb-1"></i>
                                 <p class="text-xs font-black text-amber-600">경미사고</p>
@@ -640,7 +688,7 @@
                             </div>
                         </label>
                         <label class="cursor-pointer">
-                            <input type="radio" name="severity" checked class="hidden peer">
+                            <input type="radio" id="sev-nearmiss" name="severity" value="nearmiss" checked class="hidden peer">
                             <div class="p-3 border-2 border-blue-500 bg-blue-50 rounded-lg text-center">
                                 <i class="fa-solid fa-triangle-exclamation text-blue-500 text-xl mb-1"></i>
                                 <p class="text-xs font-black text-blue-600">아차사고</p>
@@ -871,7 +919,7 @@
 
                 <!-- 9. 증빙자료 -->
                 <div>
-                    <label class="text-xs font-bold text-gray-700 block mb-1">9. 현장 증빙자료</label>
+                    <label class="text-xs font-bold text-gray-700 block mb-1">9. 현장 증빙자료 <span class="text-blue-600 text-[10px] font-normal">(불안전 상태 촬영 시 필수)</span></label>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-rose-500 hover:bg-rose-50 cursor-pointer">
                         <i class="fa-solid fa-camera text-2xl text-gray-400 mb-2"></i>
                         <p class="text-xs text-gray-700 font-bold">사진·동영상·CCTV 파일 첨부</p>
@@ -901,8 +949,8 @@
                 </p>
                 <div class="flex space-x-2">
                     <button onclick="closeReportModal()" class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg">취소</button>
-                    <button class="bg-white border border-blue-400 hover:bg-blue-50 text-[#00529C] text-sm font-semibold px-4 py-2 rounded-lg">임시저장</button>
-                    <button class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-black px-5 py-2 rounded-lg shadow-md">
+                    <button onclick="saveDraft()" class="bg-white border border-blue-400 hover:bg-blue-50 text-[#00529C] text-sm font-semibold px-4 py-2 rounded-lg">임시저장</button>
+                    <button onclick="submitReport()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm font-black px-5 py-2 rounded-lg shadow-md">
                         <i class="fa-solid fa-paper-plane mr-1"></i>즉시 신고
                     </button>
                 </div>
@@ -911,6 +959,7 @@
     </div>
 
     <script>
+        // ============ 모달 제어 ============
         function openReportModal() {
             document.getElementById('reportModal').classList.remove('hidden');
             document.getElementById('reportModal').classList.add('flex');
@@ -919,10 +968,53 @@
             document.getElementById('reportModal').classList.add('hidden');
             document.getElementById('reportModal').classList.remove('flex');
         }
-        function openDetailModal() {
-            alert('상세 화면으로 이동합니다.\n(별도 페이지: incident-detail.html)');
+        function openDetailModal(incId) {
+            const id = incId || 'INC-2024-0087';
+            if (confirm(`[${id}] 사고 상세 화면으로 이동하시겠습니까?\n(incident-detail.html)`)) {
+                location.href = `incident-detail.html?id=${id}`;
+            }
+        }
+        function saveDraft() {
+            alert('✅ 임시저장 되었습니다.\n작성 중인 신고서는 마이페이지에서 이어서 작성할 수 있습니다.');
+        }
+        function submitReport() {
+            if (confirm('🚨 사고 신고를 즉시 접수하시겠습니까?\n\n· 관리자에게 즉시 알림 발송\n· 위험성평가 수시평가 자동 트리거\n· 신고 후 취소 불가')) {
+                alert('✅ 신고가 정상 접수되었습니다.\n\n신고번호: INC-2024-0088\n담당자: 안전보건팀 (즉시 통보 완료)\n\n대시보드로 돌아갑니다.');
+                closeReportModal();
+                // 대시보드로 복귀
+                setTimeout(() => { location.href = 'dashboard.html?reported=success'; }, 500);
+            }
         }
 
+        // ============ 대시보드에서 진입 시 자동 처리 ============
+        window.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            const type = params.get('type');
+
+            // 1) 대시보드 "아차사고/불안전요인 신고" 카드에서 진입한 경우
+            //    URL: incident-report.html?action=report&type=nearmiss
+            if (action === 'report') {
+                // 진입 안내 배너 표시
+                document.getElementById('entryBanner').classList.remove('hidden');
+                
+                // 아차사고 타입일 경우 심각도 자동 선택 (이미 기본값)
+                if (type === 'nearmiss') {
+                    document.getElementById('sev-nearmiss').checked = true;
+                    // 모달 제목 커스터마이징
+                    document.getElementById('modalTitle').innerText = '⚠️ 아차사고 / 불안전요인 신고';
+                    document.getElementById('modalSubtitle').innerText = '현장 불안전 상태 촬영 및 즉시 개선 조치 요청';
+                    document.getElementById('modalHeader').className = 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-4 flex items-center justify-between';
+                }
+                
+                // 500ms 후 모달 자동 오픈 (페이지 렌더링 완료 대기)
+                setTimeout(() => {
+                    openReportModal();
+                }, 500);
+            }
+        });
+
+        // ============ Chart.js ============
         // 월별 사고 추이
         new Chart(document.getElementById('trendChart'), {
             type: 'line',
