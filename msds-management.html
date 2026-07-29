@@ -763,5 +763,15 @@
             });
         });
     </script>
+// 상세 슬라이드 패널 열기/닫기
+function openDetailPanel() {
+    document.getElementById('detailPanel').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeDetailPanel() {
+    document.getElementById('detailPanel').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
 </body>
 </html>
