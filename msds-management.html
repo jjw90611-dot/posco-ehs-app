@@ -2326,12 +2326,24 @@
         if(MATERIALS.length > 0) applyMaterialToForms(MATERIALS.find(m=>m.id===selectedMaterialId));
 
         // ① MSDS 업로드
-        const zone=document.getElementById('uploadZone'), input=document.getElementById('msdsFileInput');
+        const zone = document.getElementById('uploadZone');
+        const input = document.getElementById('msdsFileInput');
         if(zone && input){
-            zone.addEventListener('click', e=>{ if(e.target.tagName!=='BUTTON') input.click(); });
-            input.addEventListener('change', e=>{ handleMSDSFiles(e.target.files); e.target.value=''; });
-            ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add('bg-teal-100','border-teal-500');}));
-            ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove('bg-teal-100','border-teal-500');}));
+            zone.addEventListener('click', e=>{
+                if(e.target.tagName !== 'BUTTON') input.click();
+            });
+            input.addEventListener('change', e=>{
+                handleMSDSFiles(e.target.files);
+                e.target.value='';
+            });
+            ['dragenter','dragover'].forEach(ev=>zone.addEventListener(ev, e=>{
+                e.preventDefault();
+                zone.classList.add('bg-teal-100','border-teal-500');
+            }));
+            ['dragleave','drop'].forEach(ev=>zone.addEventListener(ev, e=>{
+                e.preventDefault();
+                zone.classList.remove('bg-teal-100','border-teal-500');
+            }));
             zone.addEventListener('drop', e=>handleMSDSFiles(e.dataTransfer.files));
         }
 
@@ -2343,7 +2355,7 @@
             });
         }
 
-        // ⭐ [신규] ②탭 검색 입력 Enter 키
+        // ⭐ ②탭 검색 입력 Enter 키
         const f2Search = document.getElementById('f2-search');
         if(f2Search){
             f2Search.addEventListener('keydown', e=>{
@@ -2360,10 +2372,24 @@
         updateAllKPI();
         checkApiHealth();
 
-        // 상단 헤더 KPI 초기값
+        // 상단 헤더 KPI (작업환경측정 만료임박)
         const hdrEnvSoon = document.getElementById('hdr-envSoon');
         if(hdrEnvSoon){
-            const today=new Date(); let soon=0;
+            const today = new Date();
+            let soon = 0;
             materials.forEach(m=>{
-                const next=new Date(m.date); next.setMonth(next.getMonth()+m.cycle);
-                const d=Math.
+                const next = new Date(m.date);
+                next.setMonth(next.getMonth() + m.cycle);
+                const dday = Math.ceil((next - today) / 86400000);
+                if(dday < 30 && dday >= 0) soon++;
+            });
+            hdrEnvSoon.textContent = soon;
+        }
+
+        // 상단 헤더 KPI (특수건진 대상 인원)
+        const hdrHealth = document.getElementById('hdr-health');
+        if(hdrHealth) hdrHealth.textContent = healths.length;
+    });
+    </script>
+</body>
+</html>
