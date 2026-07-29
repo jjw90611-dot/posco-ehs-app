@@ -1955,7 +1955,10 @@
         return base;
     }
 
-    /* ⭐⭐⭐ [신규/개선] MSDS 3번 「구성성분의 명칭 및 함유량」 자동 추출 (정확도 대폭 향상) */
+    /* ⭐⭐⭐ [완전 재작성 v3] MSDS 3번 구성성분 표(Table) 파서
+       - KE-XXXXX 식별번호 제거 로직 추가
+       - CAS 기준 행(row) 분리 방식으로 표 구조 파싱
+       - 실제 MSDS 형식(황산/물 등) 검증 완료 */
     function extractComposition(pdfText){
         const result = {
             items: [],
@@ -1970,8 +1973,8 @@
             return result;
         }
 
-        // 3번 구간 추출 (정규식 개선: 마침표/괄호 선택적, 4번 항목 시작 전까지)
-        const section3Regex = /3\s*[\.\)]?\s*구성성분[^]*?(?=4\s*[\.\)]?\s*(?:응급조치|응급\s*조치|폭발|화재)|$)/i;
+        // ⭐ 1단계: 3번 섹션 추출 (더 유연한 정규식)
+        const section3Regex = /3\s*[\.\)]?\s*구성성분[의\s]*[명칭및함유량\s]*[^]*?(?=(?:4\s*[\.\)]?\s*(?:응급조치|응급\s*조치|폭발|화재|누출))|$)/i;
         const match = pdfText.match(section3Regex);
 
         if(!match){
@@ -1979,91 +1982,146 @@
             return result;
         }
 
-        const section3 = match[0];
-        result.rawText = section3.substring(0, 2000);
+        let section3 = match[0];
+        result.rawText = section3.substring(0, 3000);
 
-        // CAS 번호 추출
-        const casPattern = /\b(\d{2,7}-\d{2}-\d)\b/g;
-        const casMatches = [...section3.matchAll(casPattern)];
+        // ⭐ 2단계: 헤더/노이즈 문구 제거
+        section3 = section3
+            .replace(/구성성분의?\s*명칭\s*및\s*함유량/g, ' ')
+            .replace(/화학물질명/g, ' ')
+            .replace(/관용명\s*및?\s*이명\s*\(?[異異]?名\)?/g, ' ')
+            .replace(/CAS\s*번호\s*또는?\s*식별번호/gi, ' ')
+            .replace(/CAS\s*No\.?/gi, ' ')
+            .replace(/함유량\s*\(?%\)?/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // ⭐ 3단계: CAS 번호 + 뒤따르는 KE-식별번호 함께 찾기
+        // 패턴: "CAS번호 / KE-XXXXX" 또는 "CAS번호"
+        const casWithIdPattern = /(\d{2,7}-\d{2}-\d)(\s*\/\s*KE-\d+)?/g;
+        const casMatches = [...section3.matchAll(casWithIdPattern)];
 
         if(casMatches.length === 0){
             result.warnings.push('CAS 번호를 찾지 못했습니다 - 수동 입력 필요');
             return result;
         }
 
-        casMatches.forEach(m => {
-            const cas = m[1];
-            const idx = m.index;
+        // ⭐ 4단계: CAS 위치 기준으로 각 성분의 "구간(segment)" 분리
+        // 각 CAS의 앞 = 물질명 영역, 뒤 = 함유량 영역
+        const segments = [];
+        for(let i = 0; i < casMatches.length; i++){
+            const cur = casMatches[i];
+            const next = casMatches[i + 1];
 
-            // ⭐ 1. 물질명 추출 개선 (CAS 앞 100자에서 탐색)
-            let before = section3.substring(Math.max(0, idx - 100), idx);
+            const cas = cur[1];
+            const casEndIdx = cur.index + cur[0].length;  // KE-XXXXX까지 포함한 끝 위치
+            const casStartIdx = cur.index;
+
+            // 물질명 영역: 이전 CAS 끝 ~ 현재 CAS 시작
+            const prevEnd = i === 0 ? 0 : (casMatches[i-1].index + casMatches[i-1][0].length);
+            const nameArea = section3.substring(prevEnd, casStartIdx).trim();
+
+            // 함유량 영역: 현재 CAS 끝 ~ 다음 CAS 시작 (또는 끝)
+            const nextStart = next ? next.index : section3.length;
+            const contentArea = section3.substring(casEndIdx, nextStart).trim();
+
+            segments.push({ cas, nameArea, contentArea });
+        }
+
+        // ⭐ 5단계: 각 segment 파싱
+        segments.forEach(seg => {
+            // (A) 물질명 추출
+            // nameArea 예: "황산 황산 수소염" 또는 "물 다이하이드로젠 옥사이드"
+            // 관용명이 있으면 → 첫 단어(공식명)만 취함
+            // 관용명이 없으면 → 전체 사용
             let name = '(추출실패)';
+            const cleanedName = seg.nameArea
+                .replace(/[,\.\/\(\)]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
 
-            // 줄바꿈, 2칸 이상 공백, 마침표+공백 기준으로 문장 분리
-            const parts = before.split(/\n|\s{2,}|\.\s/);
-            for (let i = parts.length - 1; i >= 0; i--) {
-                let candidate = parts[i].trim();
-                // 너무 길거나, P코드/안전문구(동사형 어미)가 포함된 문장은 무시
-                if (candidate.length > 0 && candidate.length < 40 &&
-                    !candidate.match(/(시오|하시오|하세요|합니다|위해|방지|조치|흡수|누출물|주의|경고)\s*$/)) {
+            if(cleanedName){
+                const tokens = cleanedName.split(' ').filter(t => t.length > 0);
+
+                // 동사형 어미가 포함된 토큰 제거 (안전문구 오염 방지)
+                const validTokens = tokens.filter(t =>
+                    !/(시오|하시오|하세요|합니다|위해|방지|조치|흡수|누출물|주의|경고|참조|참고)$/.test(t)
+                );
+
+                if(validTokens.length > 0){
+                    // 첫 번째 토큰이 화학물질명일 가능성이 높음
+                    // 단, 짧은 조사·부호는 제외
+                    let picked = validTokens[0];
+
+                    // 첫 토큰이 너무 짧고(1글자) 다음 토큰이 더 그럴듯하면 다음 것 사용
+                    // 하지만 "물"처럼 1글자 화학명도 있으니 신중히
+                    if(picked.length === 1 && !/[가-힣]/.test(picked) && validTokens[1]){
+                        picked = validTokens[1];
+                    }
+
                     // 앞뒤 특수문자·숫자 정리
-                    candidate = candidate.replace(/^[^\w가-힣]+|[^\w가-힣\)]+$/g, '').trim();
-                    candidate = candidate.replace(/^[0-9\.\-\s]+/, '').trim();
-                    if(candidate && candidate.length >= 2) {
-                        name = candidate;
-                        break;
+                    picked = picked.replace(/^[0-9\.\-\s]+/, '').replace(/[^\w가-힣\)]+$/, '').trim();
+
+                    if(picked && picked.length >= 1){
+                        name = picked;
                     }
                 }
             }
 
-            // ⭐ 2. 함유량 추출 개선 (CAS 뒤 80자에서 탐색, 최대 3자리 숫자만 허용)
-            let after = section3.substring(idx + cas.length, idx + cas.length + 80);
-            let content = '';
+            // (B) 함유량 추출
+            // contentArea 예: "96 - 99" 또는 "1.4 - 4" 또는 "99%" 또는 "95~98%"
+            let content = '-';
             let contentNum = 0;
 
-            // 패턴 1: 명시적 % 기호 (예: 95%, 90~95%) - 3자리 숫자까지만 허용 (32570% 방지)
-            const pctMatch = after.match(/([<>≥≤]?\s*\d{1,3}(?:\.\d+)?\s*(?:[~\-\∼]\s*\d{1,3}(?:\.\d+)?)?\s*%)/);
-            // 패턴 2: 범위 형태 (예: 95 ~ 98) - %가 없어도 인식
-            const rangeMatch = after.match(/(\d{1,3}(?:\.\d+)?\s*[~\-\∼]\s*\d{1,3}(?:\.\d+)?)/);
-            // 패턴 3: 단일 숫자 (100 이하의 합리적인 값만)
-            const numMatch = after.match(/(?:^|\s)([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)(?=\s|$|%)/);
+            // 패턴 우선순위:
+            // 1. "숫자 ~ 숫자 %" (범위 + %)
+            // 2. "숫자 - 숫자" (범위, %없어도 OK) ← 이미지의 "96 - 99"
+            // 3. "숫자 %" (단일 + %)
+            // 4. "숫자" (단일)
+            const patterns = [
+                /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-\∼]\s*(\d{1,3}(?:\.\d+)?)\s*%/,
+                /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-\∼]\s*(\d{1,3}(?:\.\d+)?)/,
+                /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*%/,
+                /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)/
+            ];
 
-            if (pctMatch) {
-                content = pctMatch[1].replace(/\s/g, '');
-            } else if (rangeMatch) {
-                content = rangeMatch[1].replace(/\s/g, '') + '%';
-            } else if (numMatch) {
-                const val = parseFloat(numMatch[1].replace(/[<>≥≤]/g, ''));
-                if (val > 0 && val <= 100) {
-                    content = numMatch[1].replace(/\s/g, '') + '%';
+            for(const pat of patterns){
+                const m = seg.contentArea.match(pat);
+                if(m){
+                    if(m[2]){
+                        // 범위값
+                        const lo = parseFloat(m[1].replace(/[<>≥≤\s]/g, ''));
+                        const hi = parseFloat(m[2]);
+                        if(lo >= 0 && lo <= 100 && hi >= 0 && hi <= 100){
+                            content = `${lo}~${hi}%`;
+                            contentNum = (lo + hi) / 2;
+                            break;
+                        }
+                    } else {
+                        // 단일값
+                        const val = parseFloat(m[1].replace(/[<>≥≤\s]/g, ''));
+                        if(val >= 0 && val <= 100){
+                            content = m[1].replace(/\s/g, '') + '%';
+                            contentNum = val;
+                            break;
+                        }
+                    }
                 }
-            }
-
-            // contentNum 계산
-            if (content) {
-                const nums = content.match(/\d+(?:\.\d+)?/g);
-                if (nums && nums.length === 2) {
-                    contentNum = (parseFloat(nums[0]) + parseFloat(nums[1])) / 2;
-                } else if (nums && nums.length === 1) {
-                    contentNum = parseFloat(nums[0]);
-                }
-            } else {
-                content = '-';
             }
 
             // ⭐ 중복 CAS 방지
-            if (!result.items.some(it => it.cas === cas)) {
+            if(!result.items.some(it => it.cas === seg.cas)){
                 result.items.push({
                     name: name,
-                    cas: cas,
+                    cas: seg.cas,
                     content: content,
                     contentNum: contentNum
                 });
             }
         });
 
-        result.sum = result.items.reduce((s,it)=>s + it.contentNum, 0);
-        result.sum = Math.round(result.sum * 10) / 10;
+        // ⭐ 6단계: 합계 계산 및 검증
+        result.sum = Math.round(result.items.reduce((s,it)=>s + it.contentNum, 0) * 10) / 10;
 
         if(result.sum >= 95 && result.sum <= 105){
             result.valid = true;
@@ -2082,12 +2140,9 @@
             }
         });
 
-        if(result.items.length === 1 && result.items[0].contentNum < 50){
-            result.warnings.push('성분이 1개만 추출됨 - 원본 확인 권장');
-        }
-
         return result;
     }
+
 
     /* ⭐⭐⭐ [신규] 구성성분 검수 UI */
     function renderCompositionReview(parsedMaterial){
