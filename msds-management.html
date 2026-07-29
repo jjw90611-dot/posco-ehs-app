@@ -712,14 +712,325 @@
 </div>
 
 
-                <!-- ③ 경고표지·관리요령 -->
-                <div id="tab-label" class="tab-panel">
-                    <div class="text-center py-16 text-gray-400">
-                        <i class="fa-solid fa-tag text-5xl"></i>
-                        <p class="mt-3 text-sm">공정별 경고표지·관리요령 자동생성 화면이 이 영역에 표시됩니다.</p>
-                        <p class="text-xs">(다음 단계에서 상세 구축 예정)</p>
+<!-- ③ 경고표지·관리요령 -->
+<div id="tab-label" class="tab-panel">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- ===== 좌측: 물질 선택 리스트 ===== -->
+        <div class="lg:col-span-3">
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 sticky top-24">
+                <h3 class="text-xs font-black text-gray-700 mb-2 flex items-center">
+                    <i class="fa-solid fa-list text-teal-600 mr-1.5"></i>물질 선택
+                </h3>
+                <!-- 검색 -->
+                <div class="relative mb-2">
+                    <input type="text" placeholder="물질명·CAS 검색" class="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                    <i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-gray-400 text-[10px]"></i>
+                </div>
+                <!-- 필터 뱃지 -->
+                <div class="flex gap-1 mb-2 text-[10px]">
+                    <button class="bg-teal-600 text-white px-2 py-0.5 rounded-full font-bold">전체</button>
+                    <button class="bg-white border border-gray-300 text-gray-600 px-2 py-0.5 rounded-full font-semibold hover:bg-slate-100">특별관리</button>
+                    <button class="bg-white border border-gray-300 text-gray-600 px-2 py-0.5 rounded-full font-semibold hover:bg-slate-100">CMR</button>
+                </div>
+
+                <!-- 물질 리스트 -->
+                <div class="space-y-1 max-h-[600px] overflow-y-auto">
+                    <!-- 선택된 항목 -->
+                    <button class="w-full text-left bg-teal-600 text-white rounded-lg p-2.5 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <p class="text-xs font-bold">NMP</p>
+                            <i class="fa-solid fa-check text-[10px]"></i>
+                        </div>
+                        <p class="text-[10px] text-teal-100 mt-0.5">872-50-4</p>
+                        <span class="inline-block bg-white/20 text-white text-[9px] font-bold px-1.5 py-0.5 rounded mt-1">특별관리</span>
+                    </button>
+                    <!-- 일반 항목들 -->
+                    <button class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5">
+                        <p class="text-xs font-bold text-gray-800">황산코발트</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">10124-43-3</p>
+                        <div class="flex gap-1 mt-1">
+                            <span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded">특별관리</span>
+                            <span class="bg-orange-100 text-orange-700 text-[9px] font-bold px-1.5 py-0.5 rounded">CMR</span>
+                        </div>
+                    </button>
+                    <button class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5">
+                        <p class="text-xs font-bold text-gray-800">수산화리튬</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">1310-65-2</p>
+                    </button>
+                    <button class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5">
+                        <p class="text-xs font-bold text-gray-800">황산니켈</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">7786-81-4</p>
+                        <div class="flex gap-1 mt-1">
+                            <span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded">특별관리</span>
+                            <span class="bg-orange-100 text-orange-700 text-[9px] font-bold px-1.5 py-0.5 rounded">CMR</span>
+                        </div>
+                    </button>
+                    <button class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5">
+                        <p class="text-xs font-bold text-gray-800">에탄올</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">64-17-5</p>
+                    </button>
+                    <button class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5">
+                        <p class="text-xs font-bold text-gray-800">수산화나트륨</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">1310-73-2</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 중앙: 경고표지 미리보기 ===== -->
+        <div class="lg:col-span-5">
+            <!-- 옵션 바 -->
+            <div class="bg-white border border-gray-200 rounded-lg p-3 mb-3">
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-600">용지 사이즈</label>
+                        <select class="mt-0.5 w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                            <option>A4 (210×297)</option>
+                            <option>A3 (297×420)</option>
+                            <option>A5 (148×210)</option>
+                            <option>커스텀</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-600">언어</label>
+                        <select class="mt-0.5 w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                            <option>한글</option>
+                            <option>한글 + 영문</option>
+                            <option>한글 + 중문</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-600">템플릿</label>
+                        <select class="mt-0.5 w-full border border-gray-300 rounded px-2 py-1 text-xs">
+                            <option>표준형 (KOSHA)</option>
+                            <option>간이형</option>
+                            <option>공정용</option>
+                        </select>
                     </div>
                 </div>
+            </div>
+
+            <!-- 경고표지 프리뷰 -->
+            <div class="bg-white border-2 border-gray-300 rounded-lg shadow-md">
+                <!-- 프리뷰 헤더 (인쇄 시 제외) -->
+                <div class="bg-slate-100 border-b border-gray-300 px-3 py-1.5 flex items-center justify-between rounded-t-lg">
+                    <span class="text-[11px] font-bold text-gray-600"><i class="fa-solid fa-eye mr-1"></i>경고표지 미리보기 (A4)</span>
+                    <span class="text-[10px] text-gray-500">100%</span>
+                </div>
+
+                <!-- 실제 표지 -->
+                <div class="p-5">
+                    <!-- 제목 -->
+                    <div class="text-center border-b-4 border-black pb-3 mb-4">
+                        <h2 class="text-2xl font-black text-gray-900">경 고 표 지</h2>
+                        <p class="text-[10px] text-gray-500 mt-1">Warning Label — 산업안전보건법 제114조</p>
+                    </div>
+
+                    <!-- 물질명 -->
+                    <div class="text-center mb-4">
+                        <p class="text-[10px] font-bold text-gray-500">물질명 / Product Name</p>
+                        <p class="text-xl font-black text-gray-900 mt-1">N-Methyl-2-pyrrolidone</p>
+                        <p class="text-sm font-bold text-gray-700">(NMP, CAS No. 872-50-4)</p>
+                    </div>
+
+                    <!-- GHS 픽토그램 (4개) -->
+                    <div class="flex justify-center gap-2 mb-4">
+                        <div class="w-16 h-16 border-2 border-red-600 rotate-45 flex items-center justify-center bg-white" title="건강유해성">
+                            <i class="fa-solid fa-person-dots-from-line text-2xl text-black -rotate-45"></i>
+                        </div>
+                        <div class="w-16 h-16 border-2 border-red-600 rotate-45 flex items-center justify-center bg-white" title="경고">
+                            <i class="fa-solid fa-triangle-exclamation text-2xl text-black -rotate-45"></i>
+                        </div>
+                        <div class="w-16 h-16 border-2 border-red-600 rotate-45 flex items-center justify-center bg-white" title="인화성">
+                            <i class="fa-solid fa-fire text-2xl text-black -rotate-45"></i>
+                        </div>
+                    </div>
+
+                    <!-- 신호어 -->
+                    <div class="bg-red-600 text-white text-center py-2 mb-3">
+                        <p class="text-xl font-black">위 험 (DANGER)</p>
+                    </div>
+
+                    <!-- 유해·위험 문구 -->
+                    <div class="mb-3">
+                        <p class="text-[11px] font-black text-gray-800 border-b border-gray-300 pb-1 mb-2">■ 유해·위험 문구 (H-Statement)</p>
+                        <ul class="text-xs text-gray-800 space-y-1 pl-3">
+                            <li>• H360D — 태아에 손상을 일으킬 수 있음</li>
+                            <li>• H319 — 눈에 심한 자극을 일으킴</li>
+                            <li>• H315 — 피부에 자극을 일으킴</li>
+                            <li>• H335 — 호흡기 자극을 일으킬 수 있음</li>
+                        </ul>
+                    </div>
+
+                    <!-- 예방조치 문구 -->
+                    <div class="mb-3">
+                        <p class="text-[11px] font-black text-gray-800 border-b border-gray-300 pb-1 mb-2">■ 예방조치 문구 (P-Statement)</p>
+                        <ul class="text-xs text-gray-800 space-y-1 pl-3">
+                            <li>• P201 — 사용 전 취급요령을 확보하시오</li>
+                            <li>• P280 — 보호장갑·보안경·안면보호구를 착용하시오</li>
+                            <li>• P305+P351+P338 — 눈에 묻으면 몇 분간 물로 조심히 씻으시오</li>
+                            <li>• P308+P313 — 노출 우려 시 의학적 진단을 받으시오</li>
+                        </ul>
+                    </div>
+
+                    <!-- 공급자 정보 -->
+                    <div class="border-t border-gray-300 pt-2 grid grid-cols-2 gap-2 text-[10px]">
+                        <div>
+                            <p class="font-bold text-gray-500">공급자</p>
+                            <p class="text-gray-800">포스코퓨처엠㈜ 광양공장</p>
+                            <p class="text-gray-600">전남 광양시 광양읍</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-gray-500">비상연락처</p>
+                            <p class="text-gray-800 font-bold">☎ 061-797-0119</p>
+                            <p class="text-gray-600">한국화학물질관리협회 1588-3839</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 프리뷰 하단 액션 -->
+            <div class="flex gap-2 mt-3">
+                <button class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2 rounded-lg">
+                    <i class="fa-solid fa-file-pdf mr-1"></i>PDF 다운로드
+                </button>
+                <button class="flex-1 bg-white border border-gray-300 hover:bg-slate-50 text-xs font-bold py-2 rounded-lg">
+                    <i class="fa-solid fa-print mr-1"></i>인쇄
+                </button>
+                <button class="flex-1 bg-white border border-gray-300 hover:bg-slate-50 text-xs font-bold py-2 rounded-lg">
+                    <i class="fa-solid fa-image mr-1"></i>이미지
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== 우측: 관리요령서 + 게시위치 ===== -->
+        <div class="lg:col-span-4 space-y-4">
+
+            <!-- 관리요령서 카드 -->
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white px-4 py-2.5 flex items-center justify-between">
+                    <h3 class="text-sm font-black flex items-center">
+                        <i class="fa-solid fa-clipboard-list mr-2"></i>물질안전보건자료 관리요령
+                    </h3>
+                    <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">자동생성</span>
+                </div>
+                <div class="p-4 space-y-3 text-xs">
+
+                    <!-- 취급 시 주의사항 -->
+                    <div>
+                        <p class="font-black text-gray-800 mb-1.5"><i class="fa-solid fa-hand text-indigo-600 mr-1"></i>취급 시 주의사항</p>
+                        <ul class="space-y-1 text-gray-700 pl-4 list-disc">
+                            <li>임신 가능성이 있는 여성근로자는 취급 제한</li>
+                            <li>국소배기장치가 설치된 곳에서만 취급</li>
+                            <li>화기·열원으로부터 격리 (인화점 91°C)</li>
+                            <li>취급 후 반드시 손·얼굴 세척 후 식음</li>
+                        </ul>
+                    </div>
+
+                    <!-- 응급조치 -->
+                    <div>
+                        <p class="font-black text-gray-800 mb-1.5"><i class="fa-solid fa-kit-medical text-rose-600 mr-1"></i>응급조치 요령</p>
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                            <div class="bg-rose-50 rounded p-2">
+                                <p class="font-bold text-rose-700">👁 눈</p>
+                                <p class="text-gray-700 mt-0.5">15분 이상 흐르는 물로 세척 후 의료진</p>
+                            </div>
+                            <div class="bg-amber-50 rounded p-2">
+                                <p class="font-bold text-amber-700">🖐 피부</p>
+                                <p class="text-gray-700 mt-0.5">오염 의류 즉시 탈의, 비누·물로 세척</p>
+                            </div>
+                            <div class="bg-blue-50 rounded p-2">
+                                <p class="font-bold text-blue-700">💨 흡입</p>
+                                <p class="text-gray-700 mt-0.5">신선한 공기가 있는 곳으로 이동</p>
+                            </div>
+                            <div class="bg-purple-50 rounded p-2">
+                                <p class="font-bold text-purple-700">🍽 섭취</p>
+                                <p class="text-gray-700 mt-0.5">억지로 토하게 하지 말 것, 즉시 병원</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 보관 방법 -->
+                    <div>
+                        <p class="font-black text-gray-800 mb-1.5"><i class="fa-solid fa-box text-emerald-600 mr-1"></i>보관 방법</p>
+                        <ul class="space-y-1 text-gray-700 pl-4 list-disc">
+                            <li>온도: 15~25°C, 습도: 60% 이하</li>
+                            <li>산화제·강산과 격리 보관</li>
+                            <li>밀폐 용기, 통풍 잘 되는 그늘</li>
+                        </ul>
+                    </div>
+
+                    <!-- 누출 시 대응 -->
+                    <div>
+                        <p class="font-black text-gray-800 mb-1.5"><i class="fa-solid fa-droplet text-cyan-600 mr-1"></i>누출 시 대응</p>
+                        <ul class="space-y-1 text-gray-700 pl-4 list-disc">
+                            <li>발화원 제거, 관계자 외 접근 금지</li>
+                            <li>모래·규조토로 흡수 후 밀폐용기 회수</li>
+                            <li>대량 누출 시 방재센터(내선 119) 신고</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex gap-2 pt-2 border-t border-gray-100">
+                        <button class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1.5 rounded">
+                            <i class="fa-solid fa-file-pdf mr-1"></i>관리요령서 PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 게시 위치 관리 -->
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="bg-slate-100 px-4 py-2.5 flex items-center justify-between">
+                    <h3 class="text-sm font-black text-gray-800 flex items-center">
+                        <i class="fa-solid fa-map-pin text-teal-600 mr-2"></i>게시 위치 관리
+                    </h3>
+                    <button class="text-[11px] bg-teal-600 hover:bg-teal-700 text-white font-bold px-2 py-1 rounded">
+                        <i class="fa-solid fa-plus mr-0.5"></i>추가
+                    </button>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    <div class="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                            <p class="text-xs font-bold text-gray-800">광양 양극재 1공장 - 슬러리 믹싱실</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">믹서 #1~#4 상단 벽면 · A4 3매</p>
+                        </div>
+                        <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">게시중</span>
+                    </div>
+                    <div class="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                            <p class="text-xs font-bold text-gray-800">광양 양극재 1공장 - 원료창고 B동</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">입구 · 보관구역 · A3 2매</p>
+                        </div>
+                        <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded">게시중</span>
+                    </div>
+                    <div class="p-3 flex items-center justify-between hover:bg-slate-50">
+                        <div>
+                            <p class="text-xs font-bold text-gray-800">광양 양극재 2공장 - 세척공정</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">세척기 #1 · 배관 밸브 · A5 1매</p>
+                        </div>
+                        <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded">교체필요</span>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-3 py-2 text-[10px] text-gray-500 border-t border-gray-100">
+                    <i class="fa-solid fa-circle-info mr-1"></i>총 3개 위치 · 6매 게시 · 최종 점검: 2024.04.05
+                </div>
+            </div>
+
+            <!-- 일괄 출력 -->
+            <div class="bg-gradient-to-br from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-4">
+                <h3 class="text-sm font-black text-gray-800 flex items-center mb-2">
+                    <i class="fa-solid fa-layer-group text-teal-600 mr-2"></i>일괄 출력
+                </h3>
+                <p class="text-[11px] text-gray-600 mb-3">여러 물질의 경고표지·관리요령서를 한 번에 생성합니다.</p>
+                <button class="w-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2 rounded-lg">
+                    <i class="fa-solid fa-file-zipper mr-1"></i>선택 물질 일괄 다운로드 (ZIP)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                 <!-- ④ 작업환경측정 -->
                 <div id="tab-env" class="tab-panel">
