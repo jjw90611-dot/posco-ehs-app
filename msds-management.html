@@ -242,14 +242,475 @@
                     </div>
                 </div>
 
-                <!-- ② MSDS 리스트·법규분석 (다음 단계에서 상세 구축) -->
-                <div id="tab-list" class="tab-panel">
-                    <div class="text-center py-16 text-gray-400">
-                        <i class="fa-solid fa-list-check text-5xl"></i>
-                        <p class="mt-3 text-sm">MSDS 리스트 및 법규 자동분석 화면이 이 영역에 표시됩니다.</p>
-                        <p class="text-xs">(다음 단계에서 상세 구축 예정)</p>
+<!-- ② MSDS 리스트·법규분석 -->
+<div id="tab-list" class="tab-panel">
+
+    <!-- 요약 통계 스트립 -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+            <p class="text-[11px] font-bold text-gray-500">전체 물질</p>
+            <p class="text-xl font-black text-gray-800 mt-1">1,284<span class="text-xs text-gray-500"> 종</span></p>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 text-center">
+            <p class="text-[11px] font-bold text-rose-600">특별관리물질</p>
+            <p class="text-xl font-black text-rose-700 mt-1">37<span class="text-xs text-gray-500"> 종</span></p>
+        </div>
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+            <p class="text-[11px] font-bold text-orange-600">CMR 물질</p>
+            <p class="text-xl font-black text-orange-700 mt-1">24<span class="text-xs text-gray-500"> 종</span></p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+            <p class="text-[11px] font-bold text-amber-600">작업환경측정 대상</p>
+            <p class="text-xl font-black text-amber-700 mt-1">142<span class="text-xs text-gray-500"> 종</span></p>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-center">
+            <p class="text-[11px] font-bold text-indigo-600">특수건진 대상</p>
+            <p class="text-xl font-black text-indigo-700 mt-1">89<span class="text-xs text-gray-500"> 종</span></p>
+        </div>
+    </div>
+
+    <!-- 필터바 -->
+    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div>
+                <label class="text-[11px] font-bold text-gray-600">사용 부서</label>
+                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                    <option>전체</option>
+                    <option>광양 양극재 1공장</option>
+                    <option>광양 양극재 2공장</option>
+                    <option>광양 음극재</option>
+                    <option>세종 전구체</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-[11px] font-bold text-gray-600">사용 공정</label>
+                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                    <option>전체</option>
+                    <option>소성공정</option>
+                    <option>세척공정</option>
+                    <option>코팅공정</option>
+                    <option>믹싱공정</option>
+                    <option>반응공정</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-[11px] font-bold text-gray-600">유해성 분류</label>
+                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                    <option>전체</option>
+                    <option>특별관리물질</option>
+                    <option>CMR 물질</option>
+                    <option>발암성</option>
+                    <option>생식독성</option>
+                    <option>인화성</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-[11px] font-bold text-gray-600">법규 구분</label>
+                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                    <option>전체</option>
+                    <option>산업안전보건법</option>
+                    <option>화학물질관리법</option>
+                    <option>위험물안전관리법</option>
+                    <option>화학물질등록평가법</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-[11px] font-bold text-gray-600">검색 (물질명·CAS)</label>
+                <div class="relative mt-1">
+                    <input type="text" placeholder="예: NMP, 872-50-4" class="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                    <i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-gray-400 text-[10px]"></i>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end mt-3 space-x-2">
+            <button class="text-xs font-semibold text-gray-500 hover:text-gray-700 px-2 py-1">
+                <i class="fa-solid fa-rotate-left mr-1"></i>초기화
+            </button>
+            <button class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+                <i class="fa-solid fa-filter mr-1"></i>필터 적용
+            </button>
+        </div>
+    </div>
+
+    <!-- 리스트 상단 액션 -->
+    <div class="flex items-center justify-between mb-3">
+        <p class="text-xs text-gray-500">총 <span class="font-bold text-gray-800">1,284</span>건 중 <span class="font-bold text-teal-600">1 - 8</span>건 표시</p>
+        <div class="flex items-center space-x-2">
+            <button class="text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-slate-50">
+                <i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i>Excel
+            </button>
+            <button class="text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-slate-50">
+                <i class="fa-solid fa-print mr-1"></i>인쇄
+            </button>
+        </div>
+    </div>
+
+    <!-- MSDS 테이블 -->
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="w-full text-xs">
+            <thead class="bg-slate-100 text-gray-600">
+                <tr>
+                    <th class="px-3 py-2 text-left font-bold w-8"><input type="checkbox"></th>
+                    <th class="px-3 py-2 text-left font-bold">물질명 (제품명)</th>
+                    <th class="px-3 py-2 text-left font-bold">CAS No.</th>
+                    <th class="px-3 py-2 text-left font-bold">사용부서 / 공정</th>
+                    <th class="px-3 py-2 text-center font-bold">GHS 분류</th>
+                    <th class="px-3 py-2 text-center font-bold">법규 자동매칭</th>
+                    <th class="px-3 py-2 text-center font-bold">최종개정일</th>
+                    <th class="px-3 py-2 text-center font-bold">액션</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 bg-white">
+
+                <!-- 행 1: 특별관리물질 -->
+                <tr class="hover:bg-teal-50 cursor-pointer border-l-4 border-rose-500 bg-rose-50/30" onclick="openDetailPanel()">
+                    <td class="px-3 py-2.5" onclick="event.stopPropagation()"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5">
+                        <p class="font-bold text-gray-900">N-Methyl-2-pyrrolidone (NMP)</p>
+                        <span class="inline-block bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5">특별관리물질</span>
+                    </td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">872-50-4</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">광양 양극재 1공장</p>
+                        <p class="text-gray-500 text-[11px]">슬러리 믹싱</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">생식1B</span>
+                            <span class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">눈자극2</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold" title="산업안전보건법">산안법</span>
+                            <span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold" title="화학물질관리법">화관법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.03.15</td>
+                    <td class="px-3 py-2.5 text-center" onclick="event.stopPropagation()">
+                        <button class="text-teal-600 hover:text-teal-800" title="상세보기"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2" title="다운로드"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 2: 특별관리물질 -->
+                <tr class="hover:bg-teal-50 cursor-pointer border-l-4 border-rose-500 bg-rose-50/30">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5">
+                        <p class="font-bold text-gray-900">Cobalt Sulfate (황산코발트)</p>
+                        <span class="inline-block bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5">특별관리물질</span>
+                        <span class="inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 ml-1">CMR</span>
+                    </td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">10124-43-3</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">세종 전구체</p>
+                        <p class="text-gray-500 text-[11px]">반응공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">발암1B</span>
+                            <span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">생식1B</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                            <span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">화관법</span>
+                            <span class="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold" title="화학물질등록평가법">화평법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.02.28</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 3: 일반 -->
+                <tr class="hover:bg-teal-50 cursor-pointer">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5"><p class="font-bold text-gray-900">Lithium Hydroxide (수산화리튬)</p></td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">1310-65-2</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">광양 양극재 2공장</p>
+                        <p class="text-gray-500 text-[11px]">소성공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">피부부식1B</span>
+                            <span class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">급성경구4</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.04.10</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 4: 특별관리물질 -->
+                <tr class="hover:bg-teal-50 cursor-pointer border-l-4 border-rose-500 bg-rose-50/30">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5">
+                        <p class="font-bold text-gray-900">Nickel Sulfate (황산니켈)</p>
+                        <span class="inline-block bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5">특별관리물질</span>
+                        <span class="inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5 ml-1">CMR</span>
+                    </td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">7786-81-4</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">세종 전구체</p>
+                        <p class="text-gray-500 text-[11px]">반응공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">발암1A</span>
+                            <span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">생식1B</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                            <span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">화관법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.03.22</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 5: 일반 -->
+                <tr class="hover:bg-teal-50 cursor-pointer">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5"><p class="font-bold text-gray-900">Graphite (인조흑연)</p></td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">7782-42-5</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">광양 음극재</p>
+                        <p class="text-gray-500 text-[11px]">코팅공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-semibold">가연성고체2</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.01.18</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 6: 위험물 -->
+                <tr class="hover:bg-teal-50 cursor-pointer">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5"><p class="font-bold text-gray-900">Ethanol (에탄올)</p></td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">64-17-5</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">광양 양극재 1공장</p>
+                        <p class="text-gray-500 text-[11px]">세척공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">인화성2</span>
+                            <span class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">눈자극2</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                            <span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold" title="위험물안전관리법">위험물</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.04.02</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 7: 일반 -->
+                <tr class="hover:bg-teal-50 cursor-pointer">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5"><p class="font-bold text-gray-900">Sodium Hydroxide (수산화나트륨)</p></td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">1310-73-2</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">세종 전구체</p>
+                        <p class="text-gray-500 text-[11px]">반응공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">피부부식1A</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                            <span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">화관법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.02.15</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+                <!-- 행 8: 일반 -->
+                <tr class="hover:bg-teal-50 cursor-pointer">
+                    <td class="px-3 py-2.5"><input type="checkbox"></td>
+                    <td class="px-3 py-2.5"><p class="font-bold text-gray-900">Manganese Sulfate (황산망간)</p></td>
+                    <td class="px-3 py-2.5 text-gray-600 font-mono">7785-87-7</td>
+                    <td class="px-3 py-2.5">
+                        <p class="text-gray-800">세종 전구체</p>
+                        <p class="text-gray-500 text-[11px]">반응공정</p>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">특정표적2</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center">
+                        <div class="flex justify-center gap-1 flex-wrap">
+                            <span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">산안법</span>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center text-gray-600">2024.03.05</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button class="text-teal-600 hover:text-teal-800"><i class="fa-solid fa-eye"></i></button>
+                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
+                    </td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 페이지네이션 -->
+    <div class="flex items-center justify-between mt-4">
+        <div class="text-xs text-gray-500">
+            <span class="font-bold">8</span>개 항목 표시 / 페이지당
+            <select class="border border-gray-300 rounded px-1 py-0.5 text-xs ml-1">
+                <option>8</option><option>20</option><option>50</option><option>100</option>
+            </select>
+        </div>
+        <div class="flex items-center space-x-1">
+            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angles-left"></i></button>
+            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angle-left"></i></button>
+            <button class="px-3 py-1 text-xs border border-teal-500 bg-teal-500 text-white rounded font-bold">1</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50">2</button>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50">3</button>
+            <span class="text-xs text-gray-400 px-1">...</span>
+            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50">161</button>
+            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angle-right"></i></button>
+            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angles-right"></i></button>
+        </div>
+    </div>
+
+    <!-- ===== 상세 슬라이드 패널 (기본 숨김) ===== -->
+    <div id="detailPanel" class="fixed inset-0 z-50 hidden">
+        <!-- 배경 오버레이 -->
+        <div class="absolute inset-0 bg-black/40" onclick="closeDetailPanel()"></div>
+        <!-- 슬라이드 패널 -->
+        <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto">
+            <!-- 헤더 -->
+            <div class="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] text-teal-100 font-semibold">MSDS 상세정보</p>
+                    <h3 class="text-lg font-black">N-Methyl-2-pyrrolidone (NMP)</h3>
+                    <p class="text-xs text-teal-100 mt-0.5">CAS No. 872-50-4</p>
+                </div>
+                <button onclick="closeDetailPanel()" class="text-white hover:text-teal-100 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- 본문 -->
+            <div class="p-5 space-y-5 text-sm">
+                <!-- 위험성 요약 -->
+                <div class="bg-rose-50 border-l-4 border-rose-500 rounded-r-lg p-3">
+                    <p class="text-xs font-bold text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>특별관리물질 (생식독성 1B)</p>
+                    <p class="text-xs text-rose-600 mt-1">임신 중 노출 시 태아에게 해를 끼칠 우려. 여성근로자 취업 제한 및 특별관리 필요.</p>
+                </div>
+
+                <!-- GHS 분류 -->
+                <div>
+                    <h4 class="text-xs font-black text-gray-700 mb-2"><i class="fa-solid fa-flask text-teal-600 mr-1"></i>GHS 유해성·위험성 분류</h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-slate-50 rounded p-2"><span class="font-bold">생식독성</span> 구분 1B</div>
+                        <div class="bg-slate-50 rounded p-2"><span class="font-bold">눈 자극성</span> 구분 2</div>
+                        <div class="bg-slate-50 rounded p-2"><span class="font-bold">피부 자극성</span> 구분 2</div>
+                        <div class="bg-slate-50 rounded p-2"><span class="font-bold">인화성 액체</span> 구분 4</div>
                     </div>
                 </div>
+
+                <!-- 법규 매칭 상세 -->
+                <div>
+                    <h4 class="text-xs font-black text-gray-700 mb-2"><i class="fa-solid fa-scale-balanced text-teal-600 mr-1"></i>관련 법규 자동매칭</h4>
+                    <ul class="space-y-1.5 text-xs">
+                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-blue-500 mt-0.5 mr-2"></i><div><span class="font-bold">산업안전보건법</span> 시행규칙 별표22 — 특별관리물질</div></li>
+                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-blue-500 mt-0.5 mr-2"></i><div><span class="font-bold">작업환경측정 대상</span> — 측정주기: 6개월 1회 이상</div></li>
+                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-blue-500 mt-0.5 mr-2"></i><div><span class="font-bold">특수건강진단 대상</span> — 진단주기: 12개월 1회</div></li>
+                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-purple-500 mt-0.5 mr-2"></i><div><span class="font-bold">화학물질관리법</span> — 유독물질 지정</div></li>
+                    </ul>
+                </div>
+
+                <!-- 노출기준 -->
+                <div>
+                    <h4 class="text-xs font-black text-gray-700 mb-2"><i class="fa-solid fa-gauge-high text-teal-600 mr-1"></i>노출기준 (TWA)</h4>
+                    <div class="bg-slate-50 rounded p-3 text-xs">
+                        <div class="flex justify-between"><span>고용노동부 고시</span><span class="font-bold">10 ppm (40 mg/m³)</span></div>
+                        <div class="flex justify-between mt-1"><span>ACGIH TLV</span><span class="font-bold">10 ppm</span></div>
+                    </div>
+                </div>
+
+                <!-- 권장 보호구 -->
+                <div>
+                    <h4 class="text-xs font-black text-gray-700 mb-2"><i class="fa-solid fa-helmet-safety text-teal-600 mr-1"></i>권장 개인보호구</h4>
+                    <div class="flex flex-wrap gap-1.5 text-xs">
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded font-semibold">방독마스크(유기가스용)</span>
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded font-semibold">내화학장갑(부틸고무)</span>
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded font-semibold">보안경</span>
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded font-semibold">방수앞치마</span>
+                    </div>
+                </div>
+
+                <!-- 관리 이력 -->
+                <div>
+                    <h4 class="text-xs font-black text-gray-700 mb-2"><i class="fa-solid fa-clock-rotate-left text-teal-600 mr-1"></i>관리 이력</h4>
+                    <div class="text-xs space-y-1.5">
+                        <div class="flex justify-between border-b border-gray-100 pb-1"><span class="text-gray-500">최종 개정일</span><span class="font-semibold">2024.03.15</span></div>
+                        <div class="flex justify-between border-b border-gray-100 pb-1"><span class="text-gray-500">최근 작업환경측정</span><span class="font-semibold">2024.02.20 (적합)</span></div>
+                        <div class="flex justify-between border-b border-gray-100 pb-1"><span class="text-gray-500">차기 측정 예정</span><span class="font-semibold text-amber-600">2024.08.20</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">특수건진 대상자</span><span class="font-semibold">7명</span></div>
+                    </div>
+                </div>
+
+                <!-- 하단 액션 -->
+                <div class="flex space-x-2 pt-3 border-t border-gray-100">
+                    <button class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2 rounded-lg">
+                        <i class="fa-solid fa-download mr-1"></i>MSDS PDF
+                    </button>
+                    <button class="flex-1 bg-white border border-gray-300 hover:bg-slate-50 text-sm font-semibold py-2 rounded-lg">
+                        <i class="fa-solid fa-tag mr-1"></i>경고표지 생성
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 
                 <!-- ③ 경고표지·관리요령 -->
                 <div id="tab-label" class="tab-panel">
