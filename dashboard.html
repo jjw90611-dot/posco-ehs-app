@@ -40,7 +40,7 @@
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         <!-- 1. 무재해 달성 및 주요 안전 현황 KPI 카드 -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
             <!-- 무재해 일수 -->
             <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-emerald-500 flex items-center justify-between">
                 <div>
@@ -70,7 +70,19 @@
                     <p class="text-3xl font-black text-blue-600 mt-1">3<span class="text-lg font-bold text-gray-600"> 개소 작업중</span></p>
                 </div>
                 <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xl">
-                    <i class="fa-solid fa-[#00529C] fa-mask-ventilator"></i>
+                    <i class="fa-solid fa-mask-ventilator"></i>
+                </div>
+            </div>
+
+            <!-- ★ 신규: MSDS 취급 화학물질 KPI -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-teal-500 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-gray-500 uppercase">등록 MSDS / 특별관리</p>
+                    <p class="text-3xl font-black text-teal-600 mt-1">1,284<span class="text-lg font-bold text-gray-600"> 종</span></p>
+                    <p class="text-[11px] text-rose-500 font-semibold mt-0.5">특별관리물질 37종 포함</p>
+                </div>
+                <div class="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 text-xl">
+                    <i class="fa-solid fa-flask-vial"></i>
                 </div>
             </div>
 
@@ -92,7 +104,7 @@
                 <i class="fa-solid fa-layer-group text-[#00529C]"></i>
                 <span>안전관리 핵심 솔루션</span>
             </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 
                 <!-- 메뉴 1: 밀폐공간 안전관리 -->
                 <a href="confined-space.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
@@ -103,8 +115,19 @@
                     <p class="text-xs text-gray-500 mt-1">산소/유해가스 농도 측정 기록, 작업 허가서 작성 및 실시간 모니터링</p>
                 </a>
 
-                <!-- 메뉴 2: 안전보건 법적 기준 조회 -->
-                <a href="laws.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                <!-- ★ 신규 메뉴 2: MSDS 보건관리 (밀폐공간 바로 아래 위치) -->
+                <a href="msds-management.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-teal-600 transition group cursor-pointer relative">
+                    <!-- 미처리 알림 배지 (측정만료+재검진 대상) -->
+                    <span class="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse" title="측정만료 8건, 특수건강진단 대상 15건">23</span>
+                    <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-teal-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-flask-vial"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-teal-600">MSDS 보건관리</h3>
+                    <p class="text-xs text-gray-500 mt-1">화학물질 MSDS 등록·법규 자동분석, 경고표지·관리요령, 작업환경측정 및 특수건강진단 연계</p>
+                </a>
+
+                <!-- 메뉴 3: 안전보건 법적 기준 조회 -->
+                <a href="laws.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-600 transition group cursor-pointer">
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-emerald-600 group-hover:text-white transition">
                         <i class="fa-solid fa-scale-balanced"></i>
                     </div>
@@ -112,9 +135,8 @@
                     <p class="text-xs text-gray-500 mt-1">중대재해처벌법, 산업안전보건법 및 포스코퓨처엠 안전 표준 가이드</p>
                 </a>
 
-                <!-- 메뉴 3: 위험성평가(JSA) ★ 링크 연결 + 알림 배지 추가 -->
+                <!-- 메뉴 4: 위험성평가(JSA) -->
                 <a href="risk-assessment.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-500 transition group cursor-pointer relative">
-                    <!-- 미처리 알림 배지 (예정일경과 + 승인대기) -->
                     <span class="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse" title="예정일경과 3건, 승인대기 8건">11</span>
                     <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-purple-600 group-hover:text-white transition">
                         <i class="fa-solid fa-triangle-exclamation"></i>
@@ -123,8 +145,8 @@
                     <p class="text-xs text-gray-500 mt-1">작업표준 기반 위험요인 도출·위험도 산정 및 개선대책 수립 관리</p>
                 </a>
 
-                <!-- 메뉴 4: 안전점검 및 아차사고 ★ 링크만 수정 -->
-                <a href="incident-report.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
+                <!-- 메뉴 5: 안전점검 및 아차사고 -->
+                <a href="#" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-rose-600 transition group cursor-pointer">
                     <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-rose-600 group-hover:text-white transition">
                         <i class="fa-solid fa-bullhorn"></i>
                     </div>
@@ -152,7 +174,14 @@
                     </div>
                     <span class="text-xs text-gray-400">2024.05.20</span>
                 </li>
-                <!-- ★ 위험성평가 공지 추가 -->
+                <!-- ★ 신규: MSDS 관련 공지 추가 -->
+                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
+                    <div class="flex items-center space-x-3">
+                        <span class="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-0.5 rounded">MSDS</span>
+                        <span class="font-medium text-gray-800">2024년 상반기 작업환경측정 결과 통보 및 특수건강진단 대상자 안내</span>
+                    </div>
+                    <span class="text-xs text-gray-400">2024.05.20</span>
+                </li>
                 <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
                     <div class="flex items-center space-x-3">
                         <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded">평가</span>
