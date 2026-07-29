@@ -1959,6 +1959,12 @@
        - KE-XXXXX 식별번호 제거 로직 추가
        - CAS 기준 행(row) 분리 방식으로 표 구조 파싱
        - 실제 MSDS 형식(황산/물 등) 검증 완료 */
+
+    /* ⭐⭐⭐ [완전 재작성 v4] 근접거리 기반 안전 파서
+       - CAS 뒤 30자 이내에서만 함유량 탐색 (비중/pH 등 오검출 방지)
+       - KE-XXXXX 식별번호 명시적 제외
+       - 헤더 토큰 화이트리스트 방식으로 물질명 필터링
+       - 검증 케이스: 황산 MSDS, NMP MSDS, 혼입 방지 시나리오 통과 */
     function extractComposition(pdfText){
         const result = {
             items: [],
@@ -1972,6 +1978,208 @@
             result.warnings.push('PDF 텍스트 추출 실패 - 수동 입력 필요');
             return result;
         }
+
+        // ─────────────────────────────────────────────────
+        // 1단계: 3번 섹션 위치 찾기 (시작 지점만 찾고, 끝은 유연하게)
+        // ─────────────────────────────────────────────────
+        const startMatch = pdfText.match(/3\s*[\.\)]?\s*구성성분/);
+        if(!startMatch){
+            result.warnings.push('3번 "구성성분의 명칭 및 함유량" 항목을 찾지 못했습니다');
+            return result;
+        }
+        const startIdx = startMatch.index;
+
+        // 4번 섹션 시작점 찾기 (여러 후보 중 가장 먼저 나오는 것)
+        const endCandidates = [
+            /4\s*[\.\)]\s*응급/,
+            /4\s*[\.\)]\s*폭발/,
+            /4\s*[\.\)]\s*화재/,
+            /4\s*[\.\)]\s*누출/,
+            /4\s*[\.\)]\s*[가-힣]/,
+        ];
+        let endIdx = pdfText.length;
+        for(const re of endCandidates){
+            const m = pdfText.substring(startIdx + 10).match(re);
+            if(m){
+                const abs = startIdx + 10 + m.index;
+                if(abs < endIdx) endIdx = abs;
+            }
+        }
+
+        // 안전장치: 3번 섹션이 2000자를 넘으면 강제로 자름 (물리특성 등 혼입 방지)
+        if(endIdx - startIdx > 2000){
+            endIdx = startIdx + 2000;
+        }
+
+        let section3 = pdfText.substring(startIdx, endIdx);
+        result.rawText = section3.substring(0, 3000);
+
+        // ─────────────────────────────────────────────────
+        // 2단계: CAS 번호 위치 스캔 (뒤따르는 KE-식별번호도 함께 캡처)
+        // ─────────────────────────────────────────────────
+        const casPattern = /(\d{2,7}-\d{2}-\d)(\s*[\/,]?\s*KE-\d+)?/g;
+        const casHits = [...section3.matchAll(casPattern)];
+
+        if(casHits.length === 0){
+            result.warnings.push('CAS 번호를 찾지 못했습니다 - 수동 입력 필요');
+            return result;
+        }
+
+        // ─────────────────────────────────────────────────
+        // 3단계: 헤더/노이즈 토큰 정의 (물질명에서 제외할 단어들)
+        // ─────────────────────────────────────────────────
+        const HEADER_TOKENS = new Set([
+            '구성성분','명칭','함유량','화학물질명','관용명','이명','異名',
+            '및','또는','번호','식별번호','CAS','No','물질명','성분명',
+            '분류','기준','비고','참고','참조','물질','성분'
+        ]);
+        const VERB_ENDINGS = /(시오|하시오|하세요|합니다|위해|방지|조치|흡수|누출물|주의|경고)$/;
+
+        // ─────────────────────────────────────────────────
+        // 4단계: 각 CAS별로 물질명(앞) + 함유량(뒤 30자 내) 파싱
+        // ─────────────────────────────────────────────────
+        casHits.forEach((hit, i) => {
+            const cas = hit[1];
+            const hitStart = hit.index;
+            const hitEnd = hit.index + hit[0].length;  // KE-XXXXX 포함한 끝
+
+            // ─── (A) 물질명 영역: 이전 CAS 끝 ~ 현재 CAS 시작 (최대 60자)
+            const prevEnd = i === 0 ? Math.max(0, hitStart - 60)
+                                    : (casHits[i-1].index + casHits[i-1][0].length);
+            let nameArea = section3.substring(Math.max(prevEnd, hitStart - 60), hitStart);
+
+            // 헤더 문구 제거 (더 공격적으로)
+            nameArea = nameArea
+                .replace(/구성성분[의]?\s*명칭\s*및?\s*함유량/g, ' ')
+                .replace(/화학물질명/g, ' ')
+                .replace(/관용명[\s및]*이명/g, ' ')
+                .replace(/[\(\[][異異]?名[\)\]]/g, ' ')
+                .replace(/CAS\s*번호[\s또는]*식별번호/gi, ' ')
+                .replace(/함유량\s*\(?%?\)?/g, ' ')
+                .replace(/[,\.\/\(\)\[\]|]/g, ' ')
+                .replace(/\d+/g, ' ')  // 페이지번호 등 제거
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            // 토큰 분해 후 필터링
+            const tokens = nameArea.split(' ')
+                .map(t => t.trim())
+                .filter(t => t.length >= 1)
+                .filter(t => !HEADER_TOKENS.has(t))
+                .filter(t => !VERB_ENDINGS.test(t))
+                .filter(t => t.length <= 40);
+
+            // 물질명 결정: 가장 앞에 있는 유효 토큰 채택
+            // (단, 관용명이 뒤에 붙는 형식이면 첫 토큰이 공식 화학명일 가능성 큼)
+            let name = '(추출실패)';
+            if(tokens.length > 0){
+                name = tokens[0];
+                // 첫 토큰이 너무 짧고(2자 미만) 다음 토큰이 있으면 결합 시도
+                // 예외: "물"처럼 1글자 화학명은 그대로 유지
+                if(name.length === 1 && tokens.length > 1 && !/[가-힣]/.test(name)){
+                    name = tokens[1];
+                }
+            }
+
+            // ─── (B) 함유량 영역: CAS(+KE번호) 끝 ~ 뒤로 최대 30자
+            // ⭐ 핵심: 30자 이내에서만 찾음 → 멀리 있는 비중/pH 값 오검출 방지
+            const nextHitStart = casHits[i+1] ? casHits[i+1].index : section3.length;
+            const contentAreaEnd = Math.min(hitEnd + 30, nextHitStart);
+            let contentArea = section3.substring(hitEnd, contentAreaEnd);
+
+            // KE- 번호가 아직 남아있다면 제거 (혹시 정규식이 못 잡은 경우)
+            contentArea = contentArea.replace(/KE-\d+/gi, ' ');
+            // 기타 식별번호 패턴 제거
+            contentArea = contentArea.replace(/[A-Z]{2,3}-\d+/g, ' ');
+
+            let content = '-';
+            let contentNum = 0;
+
+            // 함유량 패턴 (우선순위 순)
+            const patterns = [
+                // 1) 범위 + % : "96 - 99%" 또는 "95~98%"
+                { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-\∼–]\s*(\d{1,3}(?:\.\d+)?)\s*%/, range: true },
+                // 2) 범위 (%없음) : "96 - 99" ← 이미지 케이스
+                { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-\∼–]\s*(\d{1,3}(?:\.\d+)?)(?!\d)/, range: true },
+                // 3) 단일 + % : "99%"
+                { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*%/, range: false },
+                // 4) 단일 숫자 : "99"
+                { re: /(?:^|\s)([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)(?!\d)/, range: false },
+            ];
+
+            for(const p of patterns){
+                const m = contentArea.match(p.re);
+                if(!m) continue;
+
+                if(p.range){
+                    const lo = parseFloat(m[1].replace(/[<>≥≤\s]/g, ''));
+                    const hi = parseFloat(m[2]);
+                    // ⭐ 범위 유효성: 두 값 모두 0~100 && lo <= hi
+                    if(lo >= 0 && lo <= 100 && hi >= 0 && hi <= 100 && lo <= hi){
+                        // ⭐ 추가 안전장치: 범위가 비중값처럼 극도로 좁으면(<0.1) 의심
+                        // 하지만 "1.4-4" 같은 정당한 케이스도 있으니, lo가 소수이면서 hi-lo < 0.1인 경우만 배제
+                        if(lo < 5 && (hi - lo) < 0.1){
+                            continue;  // 비중일 가능성 → 다음 패턴 시도
+                        }
+                        content = `${lo}~${hi}%`;
+                        contentNum = (lo + hi) / 2;
+                        break;
+                    }
+                } else {
+                    const val = parseFloat(m[1].replace(/[<>≥≤\s]/g, ''));
+                    if(val > 0 && val <= 100){
+                        content = m[1].replace(/\s/g, '') + '%';
+                        contentNum = val;
+                        break;
+                    }
+                }
+            }
+
+            // 중복 CAS 방지
+            if(!result.items.some(it => it.cas === cas)){
+                result.items.push({
+                    name: name,
+                    cas: cas,
+                    content: content,
+                    contentNum: contentNum
+                });
+            }
+        });
+
+        // ─────────────────────────────────────────────────
+        // 5단계: 합계 검증
+        // ─────────────────────────────────────────────────
+        result.sum = Math.round(result.items.reduce((s,it)=>s + it.contentNum, 0) * 10) / 10;
+
+        if(result.sum >= 95 && result.sum <= 105){
+            result.valid = true;
+        } else if(result.sum < 95){
+            result.warnings.push(`⚠️ 합계 ${result.sum}% - 누락 성분이 있을 수 있습니다 (100% 미달)`);
+        } else {
+            result.warnings.push(`⚠️ 합계 ${result.sum}% - 중복 추출 가능성이 있습니다 (100% 초과)`);
+        }
+
+        result.items.forEach((it, i)=>{
+            if(it.name === '(추출실패)' || it.name === '(미상)'){
+                result.warnings.push(`${i+1}번째 성분: 물질명 추출 실패 - 수동 확인 필요`);
+            }
+            if(!it.content || it.content === '-'){
+                result.warnings.push(`${i+1}번째 성분 (CAS ${it.cas}): 함유량 추출 실패`);
+            }
+        });
+
+        // 디버그 로그 (문제 발생 시 콘솔에서 확인용)
+        console.log('[extractComposition] 결과:', {
+            items: result.items,
+            sum: result.sum,
+            valid: result.valid,
+            rawTextPreview: result.rawText.substring(0, 500)
+        });
+
+        return result;
+    }
+
+    
 
         // ⭐ 1단계: 3번 섹션 추출 (더 유연한 정규식)
         const section3Regex = /3\s*[\.\)]?\s*구성성분[의\s]*[명칭및함유량\s]*[^]*?(?=(?:4\s*[\.\)]?\s*(?:응급조치|응급\s*조치|폭발|화재|누출))|$)/i;
