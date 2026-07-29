@@ -133,33 +133,33 @@
             </div>
         </div>
 
-        <!-- MSDS 미니 KPI 4개 -->
+        <!-- ⭐ MSDS 미니 KPI 4개 (실제 데이터 연동 - id 부여) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-teal-500 flex items-center justify-between">
                 <div>
                     <p class="text-[11px] font-bold text-gray-500 uppercase">전체 등록 MSDS</p>
-                    <p class="text-2xl font-black text-teal-600 mt-1">1,284<span class="text-sm text-gray-600"> 종</span></p>
+                    <p class="text-2xl font-black text-teal-600 mt-1"><span id="hdr-total">0</span><span class="text-sm text-gray-600"> 종</span></p>
                 </div>
                 <i class="fa-solid fa-flask-vial text-2xl text-teal-300"></i>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-rose-500 flex items-center justify-between">
                 <div>
                     <p class="text-[11px] font-bold text-gray-500 uppercase">특별관리물질</p>
-                    <p class="text-2xl font-black text-rose-600 mt-1">37<span class="text-sm text-gray-600"> 종</span></p>
+                    <p class="text-2xl font-black text-rose-600 mt-1"><span id="hdr-special">0</span><span class="text-sm text-gray-600"> 종</span></p>
                 </div>
                 <i class="fa-solid fa-skull-crossbones text-2xl text-rose-300"></i>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500 flex items-center justify-between">
                 <div>
                     <p class="text-[11px] font-bold text-gray-500 uppercase">작업환경측정 만료임박</p>
-                    <p class="text-2xl font-black text-amber-600 mt-1">8<span class="text-sm text-gray-600"> 건</span></p>
+                    <p class="text-2xl font-black text-amber-600 mt-1"><span id="hdr-envSoon">0</span><span class="text-sm text-gray-600"> 건</span></p>
                 </div>
                 <i class="fa-solid fa-triangle-exclamation text-2xl text-amber-300"></i>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-indigo-500 flex items-center justify-between">
                 <div>
                     <p class="text-[11px] font-bold text-gray-500 uppercase">특수건강진단 대상</p>
-                    <p class="text-2xl font-black text-indigo-600 mt-1">15<span class="text-sm text-gray-600"> 명</span></p>
+                    <p class="text-2xl font-black text-indigo-600 mt-1"><span id="hdr-health">0</span><span class="text-sm text-gray-600"> 명</span></p>
                 </div>
                 <i class="fa-solid fa-user-doctor text-2xl text-indigo-300"></i>
             </div>
@@ -176,6 +176,7 @@
                     <button data-tab="tab-list" class="tab-btn whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-teal-600 transition flex items-center space-x-2">
                         <i class="fa-solid fa-list-check"></i>
                         <span>② MSDS 리스트·법규분석</span>
+                        <span id="tabBadgeList" class="bg-teal-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">0</span>
                     </button>
                     <button data-tab="tab-label" class="tab-btn whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-teal-600 transition flex items-center space-x-2">
                         <i class="fa-solid fa-tag"></i>
@@ -198,7 +199,7 @@
             <div class="p-6">
 
                 <!-- ============================================= -->
-                <!-- ① MSDS 등록 탭 ⭐ 개선 -->
+                <!-- ① MSDS 등록 탭 (기존 유지) -->
                 <!-- ============================================= -->
                 <div id="tab-register" class="tab-panel active">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -235,7 +236,6 @@
                                         <i class="fa-solid fa-arrow-right mr-1"></i>경고표지 생성하기
                                     </button>
                                 </div>
-                                <!-- ⭐ [신규] 파싱 상세 결과 -->
                                 <div id="parseDetail" class="bg-white border border-emerald-200 rounded p-3 text-[11px] space-y-2"></div>
                             </div>
                             <div>
@@ -244,7 +244,6 @@
                                     <span>기본 정보</span>
                                     <span class="text-[10px] text-gray-500 font-normal">(파일 업로드 시 제품명 자동입력)</span>
                                 </h3>
-                                <!-- ⭐ 필드 4개로 간소화 + id 부여 -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="text-xs font-semibold text-gray-600">제품명 <span class="text-rose-500">*</span></label>
@@ -287,7 +286,6 @@
                                     <span>AI 자동분석 결과 (미리보기)</span>
                                 </h3>
                                 <p class="text-[11px] text-gray-500 mt-1">파일 업로드 시 자동으로 채워집니다</p>
-                                <!-- ⭐ id 부여: 동적 갱신 -->
                                 <div id="aiPreviewBody" class="mt-4 space-y-3 text-xs">
                                     <div>
                                         <p class="font-bold text-gray-600">🧬 GHS 유해성·위험성 분류</p>
@@ -317,11 +315,11 @@
                 </div>
 
                 <!-- ============================================= -->
-                <!-- ② MSDS 리스트·법규분석 탭 ⭐ 공식 API 검수 삽입 -->
+                <!-- ⭐ ② MSDS 리스트·법규분석 탭 (대폭 개선) -->
                 <!-- ============================================= -->
                 <div id="tab-list" class="tab-panel">
 
-                    <!-- ⭐⭐⭐ [신규] CAS 기준 공식 API 자동 검수 패널 ⭐⭐⭐ -->
+                    <!-- 공식 API 검수 패널 (기존 유지) -->
                     <div class="bg-gradient-to-r from-indigo-50 via-blue-50 to-teal-50 border border-indigo-200 rounded-xl p-4 mb-5">
                         <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
                             <div class="flex items-center gap-2">
@@ -343,8 +341,6 @@
                                 </button>
                             </div>
                         </div>
-
-                        <!-- 미니 KPI: 모니터링·매칭·매칭없음·재조회 필요 -->
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
                             <div class="bg-white/70 border border-white rounded-lg px-3 py-2">
                                 <p class="text-[10px] font-bold text-gray-500">모니터링 물질</p>
@@ -363,8 +359,6 @@
                                 <p class="text-lg font-black text-amber-700" id="ins-refresh">-</p>
                             </div>
                         </div>
-
-                        <!-- 단건 CAS 검수 입력 -->
                         <div class="flex items-center gap-2 flex-wrap">
                             <div class="relative flex-1 min-w-[240px]">
                                 <input id="insCasInput" type="text" placeholder="CAS No. 입력 (예: 872-50-4, 71-43-2)" class="w-full border border-gray-300 rounded-lg pl-8 pr-2 py-2 text-xs focus:ring-2 focus:ring-indigo-500 bg-white">
@@ -378,119 +372,160 @@
                             </button>
                             <button onclick="clearInspectCache()" class="text-[11px] text-gray-500 hover:text-gray-700 underline">캐시 초기화</button>
                         </div>
-
-                        <!-- 진행 로그 -->
                         <div id="insLog" class="hidden mt-3 bg-white/80 border border-white rounded-lg p-2.5 text-[11px] text-gray-700 space-y-1 max-h-32 overflow-y-auto"></div>
                     </div>
-                    <!-- ⭐⭐⭐ 검수 패널 끝 ⭐⭐⭐ -->
 
+                    <!-- ⭐ KPI 카드 (실제 데이터 연동) -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
                         <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
                             <p class="text-[11px] font-bold text-gray-500">전체 물질</p>
-                            <p class="text-xl font-black text-gray-800 mt-1">1,284<span class="text-xs text-gray-500"> 종</span></p>
+                            <p class="text-xl font-black text-gray-800 mt-1"><span id="k2-total">0</span><span class="text-xs text-gray-500"> 종</span></p>
                         </div>
                         <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 text-center">
                             <p class="text-[11px] font-bold text-rose-600">특별관리물질</p>
-                            <p class="text-xl font-black text-rose-700 mt-1">37<span class="text-xs text-gray-500"> 종</span></p>
+                            <p class="text-xl font-black text-rose-700 mt-1"><span id="k2-special">0</span><span class="text-xs text-gray-500"> 종</span></p>
                         </div>
                         <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
                             <p class="text-[11px] font-bold text-orange-600">CMR 물질</p>
-                            <p class="text-xl font-black text-orange-700 mt-1">24<span class="text-xs text-gray-500"> 종</span></p>
+                            <p class="text-xl font-black text-orange-700 mt-1"><span id="k2-cmr">0</span><span class="text-xs text-gray-500"> 종</span></p>
                         </div>
                         <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
                             <p class="text-[11px] font-bold text-amber-600">작업환경측정 대상</p>
-                            <p class="text-xl font-black text-amber-700 mt-1">142<span class="text-xs text-gray-500"> 종</span></p>
+                            <p class="text-xl font-black text-amber-700 mt-1"><span id="k2-env">0</span><span class="text-xs text-gray-500"> 종</span></p>
                         </div>
                         <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-center">
                             <p class="text-[11px] font-bold text-indigo-600">특수건진 대상</p>
-                            <p class="text-xl font-black text-indigo-700 mt-1">89<span class="text-xs text-gray-500"> 종</span></p>
+                            <p class="text-xl font-black text-indigo-700 mt-1"><span id="k2-health">0</span><span class="text-xs text-gray-500"> 종</span></p>
                         </div>
                     </div>
+
+                    <!-- ⭐ 필터·검색 (검색 버튼 추가 + 실제 작동) -->
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                         <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                             <div>
                                 <label class="text-[11px] font-bold text-gray-600">사용 부서</label>
-                                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
-                                    <option>전체</option><option>광양 양극재 1공장</option><option>광양 양극재 2공장</option>
-                                    <option>광양 음극재</option><option>세종 전구체</option>
+                                <select id="f2-dept" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                                    <option value="">전체</option>
+                                    <option>광양 양극재 1공장</option>
+                                    <option>광양 양극재 2공장</option>
+                                    <option>광양 음극재</option>
+                                    <option>세종 전구체</option>
+                                    <option>포항 품질보증부</option>
+                                    <option>포항 설비기술부</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="text-[11px] font-bold text-gray-600">사용 공정</label>
-                                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
-                                    <option>전체</option><option>소성공정</option><option>세척공정</option>
+                                <select id="f2-process" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                                    <option value="">전체</option>
+                                    <option>소성공정</option><option>세척공정</option>
                                     <option>코팅공정</option><option>믹싱공정</option><option>반응공정</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="text-[11px] font-bold text-gray-600">유해성 분류</label>
-                                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
-                                    <option>전체</option><option>특별관리물질</option><option>CMR 물질</option>
-                                    <option>발암성</option><option>생식독성</option><option>인화성</option>
+                                <select id="f2-hazard" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                                    <option value="">전체</option>
+                                    <option value="special">특별관리물질</option>
+                                    <option value="cmr">CMR 물질</option>
+                                    <option value="carcino">발암성</option>
+                                    <option value="repro">생식독성</option>
+                                    <option value="flam">인화성</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="text-[11px] font-bold text-gray-600">법규 구분</label>
-                                <select class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
-                                    <option>전체</option><option>산업안전보건법</option><option>화학물질관리법</option>
+                                <select id="f2-law" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                                    <option value="">전체</option>
+                                    <option>산업안전보건법</option><option>화학물질관리법</option>
                                     <option>위험물안전관리법</option><option>화학물질등록평가법</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-[11px] font-bold text-gray-600">검색 (물질명·CAS)</label>
+                                <label class="text-[11px] font-bold text-gray-600">검색 (물질명·CAS·부서)</label>
                                 <div class="relative mt-1">
-                                    <input type="text" placeholder="예: NMP, 872-50-4" class="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
+                                    <input type="text" id="f2-search" placeholder="예: NMP, 872-50-4, 광양" class="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500">
                                     <i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-gray-400 text-[10px]"></i>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex justify-end mt-3 space-x-2">
-                            <button class="text-xs font-semibold text-gray-500 hover:text-gray-700 px-2 py-1"><i class="fa-solid fa-rotate-left mr-1"></i>초기화</button>
-                            <button class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-filter mr-1"></i>필터 적용</button>
+                        <div class="flex justify-end mt-3 gap-2 flex-wrap">
+                            <button onclick="resetFilter2()" class="text-xs font-semibold text-gray-600 border border-gray-300 hover:bg-slate-100 px-3 py-1.5 rounded-lg">
+                                <i class="fa-solid fa-rotate-left mr-1"></i>초기화
+                            </button>
+                            <!-- ⭐ [신규] 검색 버튼 -->
+                            <button onclick="applyFilter2()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm">
+                                <i class="fa-solid fa-magnifying-glass mr-1"></i>검색·필터 적용
+                            </button>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between mb-3">
-                        <p class="text-xs text-gray-500">총 <span class="font-bold text-gray-800">1,284</span>건 중 <span class="font-bold text-teal-600">1 - 8</span>건 표시</p>
+
+                    <!-- ⭐ 결과 요약 + 일괄 액션 -->
+                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <p class="text-xs text-gray-500">
+                            총 <span class="font-bold text-gray-800" id="list-total-count">0</span>건 중
+                            <span class="font-bold text-teal-600" id="list-shown-count">0</span>건 표시
+                            <span id="list-filter-info" class="text-amber-600 hidden ml-2"></span>
+                        </p>
                         <div class="flex items-center space-x-2">
-                            <button class="text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-slate-50"><i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i>Excel</button>
-                            <button class="text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-slate-50"><i class="fa-solid fa-print mr-1"></i>인쇄</button>
+                            <!-- ⭐ [신규] 선택 삭제 버튼 -->
+                            <button onclick="deleteSelected2()" class="text-xs font-semibold text-rose-700 border border-rose-300 bg-rose-50 hover:bg-rose-100 rounded-lg px-3 py-1">
+                                <i class="fa-solid fa-trash mr-1"></i>선택 삭제
+                            </button>
+                            <button onclick="exportList2Excel()" class="text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-slate-50">
+                                <i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i>Excel
+                            </button>
+                            <button onclick="window.print()" class="text-xs font-semibold text-gray-600 border border-gray-300 rounded-lg px-2 py-1 hover:bg-slate-50">
+                                <i class="fa-solid fa-print mr-1"></i>인쇄
+                            </button>
                         </div>
                     </div>
+
+                    <!-- ⭐ 리스트 테이블 -->
                     <div class="overflow-x-auto border border-gray-200 rounded-lg">
                         <table class="w-full text-xs">
                             <thead class="bg-slate-100 text-gray-600">
                                 <tr>
-                                    <th class="px-3 py-2 text-left font-bold w-8"><input type="checkbox"></th>
+                                    <th class="px-3 py-2 text-left font-bold w-8">
+                                        <input type="checkbox" id="chk-all-2" onclick="toggleAllSelect2(this)">
+                                    </th>
                                     <th class="px-3 py-2 text-left font-bold">물질명 (제품명)</th>
                                     <th class="px-3 py-2 text-left font-bold">CAS No.</th>
                                     <th class="px-3 py-2 text-left font-bold">사용부서 / 공정</th>
                                     <th class="px-3 py-2 text-center font-bold">GHS 분류</th>
                                     <th class="px-3 py-2 text-center font-bold">법규 자동매칭</th>
                                     <th class="px-3 py-2 text-center font-bold">공식 API 검수</th>
-                                    <th class="px-3 py-2 text-center font-bold">최종개정일</th>
+                                    <th class="px-3 py-2 text-center font-bold">등록일</th>
                                     <th class="px-3 py-2 text-center font-bold">액션</th>
                                 </tr>
                             </thead>
                             <tbody id="listTableBody" class="divide-y divide-gray-100 bg-white">
-                                <!-- ⭐ JS로 동적 렌더링됨 (아래 renderListTable) -->
+                                <!-- 동적 렌더링 -->
                             </tbody>
                         </table>
+                        <!-- ⭐ [신규] 빈 상태 -->
+                        <div id="listEmptyState" class="hidden text-center py-16 text-gray-400 bg-white">
+                            <i class="fa-solid fa-inbox text-4xl mb-3 block"></i>
+                            <p class="text-sm font-bold text-gray-500">아직 등록된 MSDS가 없습니다</p>
+                            <p class="text-xs text-gray-400 mt-1">① MSDS 등록 탭에서 파일을 업로드하여 시작하세요</p>
+                            <button onclick="document.querySelector('.tab-btn[data-tab=tab-register]').click()" class="mt-4 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-lg">
+                                <i class="fa-solid fa-plus mr-1"></i>MSDS 등록하러 가기
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between mt-4">
-                        <div class="text-xs text-gray-500"><span class="font-bold">8</span>개 항목 표시 / 페이지당
-                            <select class="border border-gray-300 rounded px-1 py-0.5 text-xs ml-1"><option>8</option><option>20</option><option>50</option><option>100</option></select>
+
+                    <!-- ⭐ 페이지네이션 (실제 작동) -->
+                    <div class="flex items-center justify-between mt-4 flex-wrap gap-2">
+                        <div class="text-xs text-gray-500">
+                            페이지당
+                            <select id="list-page-size" onchange="changePageSize2()" class="border border-gray-300 rounded px-1 py-0.5 text-xs ml-1">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
                         </div>
-                        <div class="flex items-center space-x-1">
-                            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angles-left"></i></button>
-                            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angle-left"></i></button>
-                            <button class="px-3 py-1 text-xs border border-teal-500 bg-teal-500 text-white rounded font-bold">1</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50">2</button>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50">3</button>
-                            <span class="text-xs text-gray-400 px-1">...</span>
-                            <button class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50">161</button>
-                            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angle-right"></i></button>
-                            <button class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50"><i class="fa-solid fa-angles-right"></i></button>
-                        </div>
+                        <div id="list-pagination" class="flex items-center space-x-1"></div>
                     </div>
                 </div>
 
@@ -769,28 +804,23 @@
         </div>
     </main>
 
-    <!-- ===== ② 상세 슬라이드 패널 (기존 유지) ===== -->
+    <!-- ===== ⭐ ② 상세 슬라이드 패널 (id 기반 동적 렌더링) ===== -->
     <div id="detailPanel" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/40" onclick="closeDetailPanel()"></div>
         <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto">
             <div class="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-5 py-4 flex items-center justify-between">
                 <div>
                     <p class="text-[11px] text-teal-100 font-semibold">MSDS 상세정보</p>
-                    <h3 class="text-lg font-black">N-Methyl-2-pyrrolidone (NMP)</h3>
-                    <p class="text-xs text-teal-100 mt-0.5">CAS No. 872-50-4</p>
+                    <h3 class="text-lg font-black" id="dp-name">-</h3>
+                    <p class="text-xs text-teal-100 mt-0.5">CAS No. <span id="dp-cas">-</span></p>
                 </div>
                 <button onclick="closeDetailPanel()" class="text-white hover:text-teal-100 text-xl"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="p-5 space-y-5 text-sm">
-                <div class="bg-rose-50 border-l-4 border-rose-500 rounded-r-lg p-3">
-                    <p class="text-xs font-bold text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>특별관리물질 (생식독성 1B)</p>
-                    <p class="text-xs text-rose-600 mt-1">임신 중 노출 시 태아에게 해를 끼칠 우려. 여성근로자 취업 제한 및 특별관리 필요.</p>
-                </div>
-            </div>
+            <div id="dp-body" class="p-5 space-y-4 text-sm"></div>
         </div>
     </div>
 
-    <!-- ===== ⭐ [신규] 공식 API 검수 결과 모달 ===== -->
+    <!-- ===== 공식 API 검수 결과 모달 ===== -->
     <div id="inspectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-5 py-4 flex items-center justify-between">
@@ -853,21 +883,15 @@
     <script>
     /* =========================================================
        [0] ⭐ 공식 API 검수 설정 — 백엔드 프록시 사용 (권장)
-       ---------------------------------------------------------
-       ⚠ 보안: 인증키는 절대 프론트엔드에 직접 넣지 마세요.
-           → 서버(.env)에 저장하고 /api/inspect/:casNo 프록시 호출
-       ⚠ 프록시 미구현 시 자동으로 데모 모드로 폴백됩니다.
        ========================================================= */
     const INSPECT_CONFIG = {
-        proxyBase: '/api/inspect',       // 백엔드 프록시 엔드포인트 (없으면 데모모드)
+        proxyBase: '/api/inspect',
         cacheTTL: {
-            success: 30 * 24 * 60 * 60 * 1000,  // 성공: 30일
-            failure: 1 * 24 * 60 * 60 * 1000    // 실패/타임아웃: 1일
+            success: 30 * 24 * 60 * 60 * 1000,
+            failure: 1 * 24 * 60 * 60 * 1000
         },
-        timeout: 10000  // 10초
+        timeout: 10000
     };
-
-    // 캐시 유틸 (localStorage)
     const InspectCache = {
         get(cas){
             try{
@@ -885,8 +909,6 @@
             Object.keys(localStorage).filter(k=>k.startsWith('pfm_inspect_')).forEach(k=>localStorage.removeItem(k));
         }
     };
-
-    // API 연결 상태 확인 (프록시 서버 존재 여부)
     let apiConnected = false;
     async function checkApiHealth(){
         try{
@@ -908,21 +930,15 @@
             pill.className = 'inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-[11px] font-bold px-2.5 py-1 rounded-full';
         }
     }
-
-    // CAS No.로 4개 공식 API 병렬 조회
     async function inspectByCas(cas, forceRefresh=false){
         cas = (cas||'').trim();
         if(!cas) throw new Error('CAS No.를 입력하세요');
-
-        // 캐시 확인
         if(!forceRefresh){
             const hit = InspectCache.get(cas);
             if(hit) return { ...hit, fromCache: true };
         }
-
         let result;
         if(apiConnected){
-            // 🔥 실제 백엔드 프록시 호출
             try{
                 const ctrl = new AbortController();
                 setTimeout(()=>ctrl.abort(), INSPECT_CONFIG.timeout);
@@ -935,19 +951,15 @@
                 result = { ok:false, error:e.message, checkedAt:Date.now() };
             }
         } else {
-            // 📦 데모 모드: 알려진 규제물질 로컬 판정
             await new Promise(r=>setTimeout(r, 400+Math.random()*400));
             result = demoInspect(cas);
             result.checkedAt = Date.now();
             result.ok = true;
             result.demo = true;
         }
-
         InspectCache.set(cas, result);
         return result;
     }
-
-    // 데모용 로컬 규제 DB (프록시 없을 때만 사용)
     const DEMO_REG_DB = {
         '872-50-4':  { name:'NMP', kosha:true, nier:true,  nfa:false, cci:true,  tags:['특별관리','생식독성1B','산안법','화관법'] },
         '10124-43-3':{ name:'황산코발트', kosha:true, nier:true, nfa:false, cci:true, tags:['특별관리','발암성','산안법','화관법'] },
@@ -957,14 +969,13 @@
         '71-43-2':   { name:'벤젠', kosha:true, nier:true, nfa:true, cci:true, tags:['특별관리','발암성1A','산안법','화관법','위험물4류'] },
         '67-56-1':   { name:'메탄올', kosha:true, nier:true, nfa:true, cci:false, tags:['특별관리','급성독성','인화성','위험물4류'] },
         '1309-48-4': { name:'산화마그네슘', kosha:true, nier:false, nfa:false, cci:false, tags:['자극성'] },
-        '64742-54-7':{ name:'광유계 윤활기유 (Hydrotreated Heavy Paraffinic Distillate)', kosha:true, nier:false, nfa:false, cci:false, tags:['건강유해성'] }
+        '64742-54-7':{ name:'광유계 윤활기유', kosha:true, nier:false, nfa:false, cci:false, tags:['건강유해성'] }
     };
     function demoInspect(cas){
         const rec = DEMO_REG_DB[cas];
         if(!rec){
             return {
-                casNo: cas,
-                status: 'NO_MATCH',
+                casNo: cas, status: 'NO_MATCH',
                 matched: { kosha:false, nier:false, nfa:false, cci:false },
                 sources: {
                     kosha:{ ok:true, hit:false, note:'MSDS 목록에 없음' },
@@ -988,21 +999,6 @@
         };
     }
 
-    /* =========================================================
-       [0-B] ⭐ ② 탭 검수 UI 로직
-       ========================================================= */
-    // 모니터링 대상 CAS 목록 (실제로는 서버에서 가져오지만, 여기선 데모 데이터)
-    const MONITOR_LIST = [
-        { name:'N-Methyl-2-pyrrolidone (NMP)', cas:'872-50-4', dept:'광양 양극재 1공장 · 슬러리 믹싱', ghs:['생식1B','눈자극2'] },
-        { name:'황산코발트', cas:'10124-43-3', dept:'세종 전구체 · 반응기실', ghs:['발암1B','수생독성'] },
-        { name:'황산니켈', cas:'7786-81-4', dept:'세종 전구체 · 세척실', ghs:['발암1A','호흡기감작'] },
-        { name:'수산화리튬', cas:'1310-65-2', dept:'광양 양극재 2공장 · 소성', ghs:['부식성1B'] },
-        { name:'에탄올', cas:'64-17-5', dept:'포항 품질보증부 · 분석실', ghs:['인화성2'] },
-        { name:'벤젠', cas:'71-43-2', dept:'포항 분석실', ghs:['발암1A','생식1B'] },
-        { name:'메탄올', cas:'67-56-1', dept:'광양 코팅공정', ghs:['급성독성3','인화성2'] },
-        { name:'산화마그네슘', cas:'1309-48-4', dept:'광양 소성공정', ghs:['자극성'] }
-    ];
-
     function insLog(msg){
         const box = document.getElementById('insLog');
         if(!box) return;
@@ -1012,7 +1008,6 @@
         box.appendChild(p);
         box.scrollTop = box.scrollHeight;
     }
-
     async function inspectCasSingle(forceRefresh){
         const cas = document.getElementById('insCasInput').value.trim();
         if(!cas){ showToast('CAS No.를 입력하세요'); return; }
@@ -1022,7 +1017,6 @@
             const result = await inspectByCas(cas, forceRefresh);
             renderInspectModal(cas, result);
             insLog(`✅ ${cas} 완료 · ${result.fromCache?'캐시 사용':'신규 조회'} · ${result.status}`);
-            // 해당 CAS가 리스트에 있으면 상태 갱신
             renderListTable();
             updateInspectKpi();
         }catch(e){
@@ -1030,17 +1024,15 @@
             insLog(`❌ ${cas} 실패: ${e.message}`);
         }
     }
-
     async function reinspectAll(){
         const btn = document.getElementById('btnReinspectAll');
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner spin mr-1"></i>재조회 중…';
-        insLog(`🚀 전체 재조회 시작 (${MONITOR_LIST.length}건, 캐시 우회)`);
-
-        // 5개씩 배치 처리
+        const list = MATERIALS.filter(m=>m.cas && m.cas!=='-');
+        insLog(`🚀 전체 재조회 시작 (${list.length}건, 캐시 우회)`);
         const BATCH = 5;
-        for(let i=0; i<MONITOR_LIST.length; i+=BATCH){
-            const batch = MONITOR_LIST.slice(i, i+BATCH);
+        for(let i=0; i<list.length; i+=BATCH){
+            const batch = list.slice(i, i+BATCH);
             await Promise.all(batch.map(async m=>{
                 try{
                     const r = await inspectByCas(m.cas, true);
@@ -1057,15 +1049,13 @@
         btn.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i>전체 재조회';
         showToast('✅ 전체 재조회 완료');
     }
-
     function clearInspectCache(){
-        if(!confirm('모든 검수 캐시를 삭제하시겠습니까? 다음 조회 시 공식 API를 다시 호출합니다.')) return;
+        if(!confirm('모든 검수 캐시를 삭제하시겠습니까?')) return;
         InspectCache.clearAll();
         renderListTable();
         updateInspectKpi();
         showToast('🗑 캐시 초기화 완료');
     }
-
     function openInspectModal(cas){
         document.getElementById('insModalCas').textContent = 'CAS No. ' + cas;
         document.getElementById('inspectModalBody').innerHTML = '<p class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner spin mr-2"></i>4개 공식 API 병렬 조회 중…</p>';
@@ -1093,7 +1083,6 @@
             ? '<span class="bg-rose-100 text-rose-700 px-3 py-1 rounded-full font-black text-xs">⚠ 규제 대상</span>'
             : '<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-black text-xs">매칭 없음</span>';
         const tags = (r.tags||[]).map(t=>`<span class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded">${t}</span>`).join(' ');
-
         body.innerHTML = `
             <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-gray-100">
                 <div>
@@ -1124,53 +1113,372 @@
         `;
     }
 
-    // ② 리스트 표: MONITOR_LIST + 캐시 상태를 매핑하여 렌더
+    /* =========================================================
+       ⭐ [신규] ② MSDS 리스트 상태 관리
+       ========================================================= */
+    // 현재 필터·페이지 상태
+    let list2State = {
+        page: 1,
+        pageSize: 10,
+        filter: { dept:'', process:'', hazard:'', law:'', search:'' },
+        filtered: [], // 필터링된 결과
+        selectedIds: new Set()
+    };
+
+    // ⭐ [교체] ②탭 리스트 렌더 — MATERIALS 기반
     function renderListTable(){
         const tbody = document.getElementById('listTableBody');
+        const emptyState = document.getElementById('listEmptyState');
         if(!tbody) return;
-        tbody.innerHTML = MONITOR_LIST.map(m=>{
-            const cache = InspectCache.get(m.cas);
-            let apiCell;
-            if(!cache){
-                apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-amber-50 border border-amber-300 text-amber-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-amber-100"><i class="fa-solid fa-circle-question mr-1"></i>재조회 필요</button>`;
-            } else if(cache.status==='REGULATED'){
-                const cnt = Object.values(cache.matched||{}).filter(Boolean).length;
-                apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-rose-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i>규제 매칭 ${cnt}건</button>`;
-            } else {
-                apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-emerald-100"><i class="fa-solid fa-check mr-1"></i>매칭 없음</button>`;
+
+        // 필터 적용
+        const f = list2State.filter;
+        const kw = f.search.trim().toLowerCase();
+        let filtered = MATERIALS.filter(m=>{
+            const dept = (m.deptInfo||m.dept||'').toString();
+            const process = (m.processInfo||m.process||'').toString();
+            if(f.dept && !dept.includes(f.dept)) return false;
+            if(f.process && !process.includes(f.process)) return false;
+            if(f.hazard === 'special' && !m.isSpecial) return false;
+            if(f.hazard === 'cmr' && !(m.tags||[]).includes('cmr')) return false;
+            if(f.hazard === 'carcino' && !((m.tags||[]).includes('carcino') || (m.hazards||[]).some(h=>h.includes('발암')))) return false;
+            if(f.hazard === 'repro' && !((m.hazards||[]).some(h=>h.includes('생식')))) return false;
+            if(f.hazard === 'flam' && !(m.pictograms||[]).includes('GHS02')) return false;
+            if(f.law){
+                if(f.law === '산업안전보건법' && !m.isSpecial) return false;
+                if(f.law === '위험물안전관리법' && !(m.pictograms||[]).includes('GHS02')) return false;
             }
-            const ghsHtml = m.ghs.map(g=>`<span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">${g}</span>`).join(' ');
-            const tags = cache?.tags ? cache.tags.slice(0,2).map(t=>`<span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">${t}</span>`).join(' ') : '-';
-            return `
-                <tr class="hover:bg-teal-50 cursor-pointer" onclick="openDetailPanel()">
-                    <td class="px-3 py-2.5" onclick="event.stopPropagation()"><input type="checkbox"></td>
-                    <td class="px-3 py-2.5"><p class="font-bold text-gray-900">${m.name}</p></td>
-                    <td class="px-3 py-2.5 text-gray-600 font-mono">${m.cas}</td>
-                    <td class="px-3 py-2.5"><p class="text-gray-800 text-[11px]">${m.dept}</p></td>
-                    <td class="px-3 py-2.5 text-center"><div class="flex justify-center gap-1 flex-wrap">${ghsHtml}</div></td>
-                    <td class="px-3 py-2.5 text-center"><div class="flex justify-center gap-1 flex-wrap">${tags}</div></td>
-                    <td class="px-3 py-2.5 text-center">${apiCell}</td>
-                    <td class="px-3 py-2.5 text-center text-gray-600">${cache?new Date(cache.checkedAt).toISOString().slice(0,10):'-'}</td>
-                    <td class="px-3 py-2.5 text-center" onclick="event.stopPropagation()">
-                        <button onclick="document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(true);" class="text-indigo-600 hover:text-indigo-800" title="재조회"><i class="fa-solid fa-rotate"></i></button>
-                        <button class="text-gray-500 hover:text-gray-700 ml-2"><i class="fa-solid fa-download"></i></button>
-                    </td>
-                </tr>`;
-        }).join('');
+            if(kw){
+                const target = (m.name+' '+(m.cas||'')+' '+dept+' '+process+' '+(m.manufacturer||'')).toLowerCase();
+                if(!target.includes(kw)) return false;
+            }
+            return true;
+        });
+
+        list2State.filtered = filtered;
+
+        // 페이지네이션
+        const total = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(total / list2State.pageSize));
+        if(list2State.page > totalPages) list2State.page = totalPages;
+        const start = (list2State.page - 1) * list2State.pageSize;
+        const pageData = filtered.slice(start, start + list2State.pageSize);
+
+        // 빈 상태 처리
+        if(MATERIALS.length === 0){
+            tbody.innerHTML = '';
+            emptyState.classList.remove('hidden');
+        } else if(pageData.length === 0){
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-gray-400 text-xs"><i class="fa-solid fa-filter-circle-xmark text-2xl mb-2 block"></i>필터 조건에 맞는 항목이 없습니다. <button onclick="resetFilter2()" class="text-teal-600 underline ml-1">필터 초기화</button></td></tr>`;
+        } else {
+            emptyState.classList.add('hidden');
+            tbody.innerHTML = pageData.map(m=>{
+                const cache = InspectCache.get(m.cas);
+                let apiCell;
+                if(!m.cas || m.cas==='-'){
+                    apiCell = `<span class="text-[10px] text-gray-400">CAS 없음</span>`;
+                } else if(!cache){
+                    apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-amber-50 border border-amber-300 text-amber-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-amber-100"><i class="fa-solid fa-circle-question mr-1"></i>재조회 필요</button>`;
+                } else if(cache.status==='REGULATED'){
+                    const cnt = Object.values(cache.matched||{}).filter(Boolean).length;
+                    apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-rose-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i>규제 매칭 ${cnt}건</button>`;
+                } else {
+                    apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-emerald-100"><i class="fa-solid fa-check mr-1"></i>매칭 없음</button>`;
+                }
+
+                // GHS 픽토그램 → 간단 뱃지
+                const ghsHtml = (m.pictograms||[]).map(code=>{
+                    const g = GHS_PICTOGRAMS[code];
+                    return `<span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold" title="${g?g.name:code}">${g?g.name.substring(0,4):code}</span>`;
+                }).join(' ') || '<span class="text-gray-400 text-[10px]">-</span>';
+
+                // 법규 태그
+                const lawTags = [];
+                if(m.isSpecial) lawTags.push('<span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">특별관리</span>');
+                if((m.pictograms||[]).includes('GHS02')) lawTags.push('<span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">위험물</span>');
+                if(cache?.tags){
+                    cache.tags.slice(0,2).forEach(t=>lawTags.push(`<span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">${t}</span>`));
+                }
+                const lawHtml = lawTags.join(' ') || '<span class="text-gray-400 text-[10px]">분석중</span>';
+
+                const dept = m.deptInfo || m.dept || '-';
+                const process = m.processInfo || m.process || '';
+                const deptDisplay = process ? `${dept}<br><span class="text-gray-500 text-[10px]">${process}</span>` : dept;
+
+                const regDate = m.uploadedAt ? new Date(m.uploadedAt).toISOString().slice(0,10) : '-';
+                const isChecked = list2State.selectedIds.has(m.id) ? 'checked' : '';
+
+                return `
+                    <tr class="hover:bg-teal-50 cursor-pointer" onclick="openDetailPanel('${m.id}')">
+                        <td class="px-3 py-2.5" onclick="event.stopPropagation()">
+                            <input type="checkbox" ${isChecked} onchange="toggleSelect2('${m.id}',this.checked)">
+                        </td>
+                        <td class="px-3 py-2.5">
+                            <p class="font-bold text-gray-900">${m.name}</p>
+                            <p class="text-[10px] text-gray-500">${m.manufacturer||''}</p>
+                        </td>
+                        <td class="px-3 py-2.5 text-gray-600 font-mono">${m.cas||'-'}</td>
+                        <td class="px-3 py-2.5"><p class="text-gray-800 text-[11px]">${deptDisplay}</p></td>
+                        <td class="px-3 py-2.5 text-center"><div class="flex justify-center gap-1 flex-wrap">${ghsHtml}</div></td>
+                        <td class="px-3 py-2.5 text-center"><div class="flex justify-center gap-1 flex-wrap">${lawHtml}</div></td>
+                        <td class="px-3 py-2.5 text-center">${apiCell}</td>
+                        <td class="px-3 py-2.5 text-center text-gray-600 text-[10px]">${regDate}</td>
+                        <td class="px-3 py-2.5 text-center whitespace-nowrap" onclick="event.stopPropagation()">
+                            <button onclick="viewInLabelTab('${m.id}')" class="text-teal-600 hover:text-teal-800 mr-2" title="경고표지 보기"><i class="fa-solid fa-tag"></i></button>
+                            ${m.cas && m.cas!=='-' ? `<button onclick="document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(true);" class="text-indigo-600 hover:text-indigo-800 mr-2" title="재조회"><i class="fa-solid fa-rotate"></i></button>`:''}
+                            <button onclick="deleteMaterial('${m.id}')" class="text-rose-600 hover:text-rose-800" title="삭제"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+
+        // 결과 요약 갱신
+        document.getElementById('list-total-count').textContent = MATERIALS.length;
+        document.getElementById('list-shown-count').textContent = total;
+        const info = document.getElementById('list-filter-info');
+        const isFiltered = f.dept || f.process || f.hazard || f.law || f.search;
+        if(isFiltered){
+            info.classList.remove('hidden');
+            info.textContent = `(필터 적용 중)`;
+        } else {
+            info.classList.add('hidden');
+        }
+
+        // 페이지네이션 렌더
+        renderPagination2(totalPages);
+
+        // KPI + 헤더 갱신
+        updateAllKPI();
+    }
+
+    // ⭐ [신규] 페이지네이션 렌더
+    function renderPagination2(totalPages){
+        const container = document.getElementById('list-pagination');
+        if(!container) return;
+        if(totalPages <= 1){ container.innerHTML = ''; return; }
+        const cur = list2State.page;
+        let html = '';
+        html += `<button ${cur===1?'disabled':''} onclick="goToPage2(1)" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50 disabled:opacity-40"><i class="fa-solid fa-angles-left"></i></button>`;
+        html += `<button ${cur===1?'disabled':''} onclick="goToPage2(${cur-1})" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50 disabled:opacity-40"><i class="fa-solid fa-angle-left"></i></button>`;
+        const startP = Math.max(1, cur-2);
+        const endP = Math.min(totalPages, startP+4);
+        for(let i=startP; i<=endP; i++){
+            html += `<button onclick="goToPage2(${i})" class="px-3 py-1 text-xs border ${i===cur?'border-teal-500 bg-teal-500 text-white font-bold':'border-gray-300 hover:bg-slate-50'} rounded">${i}</button>`;
+        }
+        html += `<button ${cur===totalPages?'disabled':''} onclick="goToPage2(${cur+1})" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50 disabled:opacity-40"><i class="fa-solid fa-angle-right"></i></button>`;
+        html += `<button ${cur===totalPages?'disabled':''} onclick="goToPage2(${totalPages})" class="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-slate-50 disabled:opacity-40"><i class="fa-solid fa-angles-right"></i></button>`;
+        container.innerHTML = html;
+    }
+    function goToPage2(p){ list2State.page = p; renderListTable(); }
+    function changePageSize2(){
+        list2State.pageSize = Number(document.getElementById('list-page-size').value);
+        list2State.page = 1;
+        renderListTable();
+    }
+
+    // ⭐ [신규] 필터 적용/초기화
+    function applyFilter2(){
+        list2State.filter = {
+            dept: document.getElementById('f2-dept').value,
+            process: document.getElementById('f2-process').value,
+            hazard: document.getElementById('f2-hazard').value,
+            law: document.getElementById('f2-law').value,
+            search: document.getElementById('f2-search').value
+        };
+        list2State.page = 1;
+        renderListTable();
+        showToast('🔎 검색·필터 적용 완료');
+    }
+    function resetFilter2(){
+        ['f2-dept','f2-process','f2-hazard','f2-law','f2-search'].forEach(id=>document.getElementById(id).value='');
+        list2State.filter = { dept:'', process:'', hazard:'', law:'', search:'' };
+        list2State.page = 1;
+        renderListTable();
+        showToast('필터 초기화 완료');
+    }
+
+    // ⭐ [신규] 선택 관리
+    function toggleSelect2(id, checked){
+        if(checked) list2State.selectedIds.add(id);
+        else list2State.selectedIds.delete(id);
+    }
+    function toggleAllSelect2(cb){
+        list2State.filtered.forEach(m=>{
+            if(cb.checked) list2State.selectedIds.add(m.id);
+            else list2State.selectedIds.delete(m.id);
+        });
+        renderListTable();
+    }
+    function deleteSelected2(){
+        if(list2State.selectedIds.size === 0){ showToast('선택된 항목이 없습니다'); return; }
+        if(!confirm(`선택된 ${list2State.selectedIds.size}건을 삭제하시겠습니까?`)) return;
+        MATERIALS = MATERIALS.filter(m=>!list2State.selectedIds.has(m.id));
+        list2State.selectedIds.clear();
+        saveMATERIALS();
+        renderMaterialList();
+        renderListTable();
+        showToast('✅ 선택 항목 삭제 완료');
+    }
+
+    // ⭐ [신규] 개별 삭제
+    function deleteMaterial(id){
+        const m = MATERIALS.find(x=>x.id===id);
+        if(!m) return;
+        if(!confirm(`「${m.name}」을(를) 삭제하시겠습니까?`)) return;
+        MATERIALS = MATERIALS.filter(x=>x.id!==id);
+        list2State.selectedIds.delete(id);
+        if(selectedMaterialId === id && MATERIALS.length > 0){
+            selectedMaterialId = MATERIALS[0].id;
+        }
+        saveMATERIALS();
+        renderMaterialList();
+        renderListTable();
+        if(MATERIALS.length > 0) applyMaterialToForms(MATERIALS.find(x=>x.id===selectedMaterialId));
+        showToast('🗑 삭제 완료');
+    }
+
+    // ⭐ [신규] 상세 패널 (id 기반)
+    function openDetailPanel(id){
+        const m = MATERIALS.find(x=>x.id===id);
+        if(!m) return;
+        document.getElementById('dp-name').textContent = m.name;
+        document.getElementById('dp-cas').textContent = m.cas || '-';
+
+        const specialBadge = m.isSpecial ? `
+            <div class="bg-rose-50 border-l-4 border-rose-500 rounded-r-lg p-3">
+                <p class="text-xs font-bold text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i>특별관리물질</p>
+                <p class="text-xs text-rose-600 mt-1">임신 중 노출 시 태아에게 해를 끼칠 우려. 특별관리 필요.</p>
+            </div>` : '';
+
+        const ghsBadges = (m.pictograms||[]).map(code=>{
+            const g = GHS_PICTOGRAMS[code];
+            return `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-semibold text-xs">${g?g.name:code}</span>`;
+        }).join(' ') || '<span class="text-gray-400 text-xs">해당 없음</span>';
+
+        document.getElementById('dp-body').innerHTML = `
+            ${specialBadge}
+            <div>
+                <p class="text-xs font-bold text-gray-500 mb-1">기본 정보</p>
+                <div class="bg-slate-50 rounded-lg p-3 space-y-1 text-xs">
+                    <p>제품명: <b>${m.name}</b></p>
+                    <p>CAS No.: <span class="font-mono">${m.cas||'-'}</span></p>
+                    <p>제조사: ${m.manufacturer||'-'}</p>
+                    <p>공급자: ${m.supplier||'-'}</p>
+                    <p>사용 부서: ${m.deptInfo||m.dept||'-'}</p>
+                    <p>사용 공정: ${m.processInfo||m.process||'-'}</p>
+                    <p>월 사용량: ${m.usageInfo||'-'} kg</p>
+                    <p>등록일: ${m.uploadedAt ? new Date(m.uploadedAt).toLocaleString() : '-'}</p>
+                </div>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 mb-1">신호어 · GHS 픽토그램</p>
+                <div class="bg-slate-50 rounded-lg p-3 flex items-center gap-2">
+                    <span class="inline-block bg-red-600 text-white text-xs font-black px-3 py-1 rounded">${m.signalWord||'-'}</span>
+                    <div class="flex flex-wrap gap-1">${ghsBadges}</div>
+                </div>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 mb-1">유해위험문구</p>
+                <ul class="bg-slate-50 rounded-lg p-3 space-y-1 text-xs text-gray-700">
+                    ${(m.hazards||[]).map(h=>`<li>· ${h}</li>`).join('') || '<li class="text-gray-400">-</li>'}
+                </ul>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-gray-500 mb-1">권장 보호구</p>
+                <p class="bg-slate-50 rounded-lg p-3 text-xs text-gray-700">${(m.ppe||[]).join(', ') || '-'}</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="viewInLabelTab('${m.id}'); closeDetailPanel();" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2 rounded-lg">
+                    <i class="fa-solid fa-tag mr-1"></i>경고표지 보기
+                </button>
+                <button onclick="deleteMaterial('${m.id}'); closeDetailPanel();" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold py-2 px-4 rounded-lg">
+                    <i class="fa-solid fa-trash mr-1"></i>삭제
+                </button>
+            </div>
+        `;
+
+        document.getElementById('detailPanel').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // ⭐ [신규] ③탭으로 이동하여 특정 물질 선택
+    function viewInLabelTab(id){
+        selectedMaterialId = id;
+        renderMaterialList();
+        const m = MATERIALS.find(x=>x.id===id);
+        if(m) applyMaterialToForms(m);
+        goToLabelTab();
+    }
+
+    // ⭐ [신규] Excel 내보내기
+    function exportList2Excel(){
+        const rows = list2State.filtered.map((m,i)=>({
+            '번호': i+1,
+            '제품명': m.name,
+            'CAS No.': m.cas||'-',
+            '제조사': m.manufacturer||'-',
+            '사용부서': m.deptInfo||m.dept||'-',
+            '사용공정': m.processInfo||m.process||'-',
+            '월사용량(kg)': m.usageInfo||'-',
+            '신호어': m.signalWord||'-',
+            '픽토그램': (m.pictograms||[]).join(', '),
+            '특별관리물질': m.isSpecial ? 'Y' : 'N',
+            '유해위험문구': (m.hazards||[]).join(' / '),
+            '등록일': m.uploadedAt ? new Date(m.uploadedAt).toISOString().slice(0,10) : '-'
+        }));
+        if(rows.length === 0){ showToast('내보낼 데이터가 없습니다'); return; }
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'MSDS리스트');
+        XLSX.writeFile(wb, 'MSDS리스트_'+new Date().toISOString().slice(0,10)+'.xlsx');
+        showToast('📥 Excel 다운로드 완료');
+    }
+
+    // ⭐ [신규] KPI + 헤더 일괄 갱신
+    function updateAllKPI(){
+        const total = MATERIALS.length;
+        const special = MATERIALS.filter(m=>m.isSpecial).length;
+        const cmr = MATERIALS.filter(m=>(m.tags||[]).includes('cmr') || (m.hazards||[]).some(h=>h.includes('발암')||h.includes('생식')||h.includes('변이원'))).length;
+        // 작업환경측정 대상 = 특별관리 or 발암/생식 물질
+        const envTarget = MATERIALS.filter(m=>m.isSpecial || (m.hazards||[]).some(h=>h.includes('발암')||h.includes('생식'))).length;
+        // 특수건진 대상 = 특별관리 물질
+        const healthTarget = MATERIALS.filter(m=>m.isSpecial).length;
+
+        // ②탭 KPI
+        const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+        set('k2-total', total);
+        set('k2-special', special);
+        set('k2-cmr', cmr);
+        set('k2-env', envTarget);
+        set('k2-health', healthTarget);
+
+        // 상단 헤더 KPI
+        set('hdr-total', total);
+        set('hdr-special', special);
+
+        // 탭 배지
+        const badge = document.getElementById('tabBadgeList');
+        if(badge) badge.textContent = total;
+
+        // 검수 KPI
+        updateInspectKpi();
     }
 
     function updateInspectKpi(){
         let matched=0, nomatch=0, refresh=0;
-        MONITOR_LIST.forEach(m=>{
+        const withCas = MATERIALS.filter(m=>m.cas && m.cas!=='-');
+        withCas.forEach(m=>{
             const c = InspectCache.get(m.cas);
             if(!c) refresh++;
             else if(c.status==='REGULATED') matched++;
             else nomatch++;
         });
-        document.getElementById('ins-total').textContent = MONITOR_LIST.length;
-        document.getElementById('ins-matched').textContent = matched;
-        document.getElementById('ins-nomatch').textContent = nomatch;
-        document.getElementById('ins-refresh').textContent = refresh;
+        const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+        set('ins-total', withCas.length);
+        set('ins-matched', matched);
+        set('ins-nomatch', nomatch);
+        set('ins-refresh', refresh);
     }
 
     /* =========================================================
@@ -1183,6 +1491,8 @@
             btn.classList.add('active');
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(targetId).classList.add('active');
+            // ②탭 진입 시 리스트 재렌더 (①에서 등록한 최신 반영)
+            if(targetId === 'tab-list') renderListTable();
         });
     });
 
@@ -1194,17 +1504,13 @@
         t.textContent = msg; t.classList.add('on');
         setTimeout(() => t.classList.remove('on'), 2200);
     }
-    function openDetailPanel() {
-        document.getElementById('detailPanel').classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-    }
     function closeDetailPanel() {
         document.getElementById('detailPanel').classList.add('hidden');
         document.body.style.overflow = '';
     }
 
     /* =========================================================
-       [3] ③ 탭: GHS 픽토그램·물질 데이터 (기존 유지)
+       [3] ③ 탭: GHS 픽토그램·물질 데이터
        ========================================================= */
     const GHS_PICTOGRAMS = {
         GHS01:{icon:'fa-burst',name:'폭발성'}, GHS02:{icon:'fa-fire',name:'인화성'},
@@ -1213,10 +1519,18 @@
         GHS07:{icon:'fa-triangle-exclamation',name:'경고(자극성)'},
         GHS08:{icon:'fa-person-dots-from-line',name:'건강유해성'}, GHS09:{icon:'fa-fish',name:'수생환경유해성'}
     };
-    const MATERIALS = [
-        {id:'MC-12RHR',name:'MC-12RHR',subtitle:'1309-48-4 외 4종',manufacturer:'포스코퓨처엠 (054-290-0114)',supplier:'포스코퓨처엠',cas:'1309-48-4 외',signalWord:'위험',pictograms:['GHS08','GHS06','GHS09'],tags:[],hazards:['눈에 심한 자극','흡입 시 치명적','장기 손상 우려','수생생물에 유독'],pPrevention:['안전조치 이해 후 취급','흄·미스트 흡입 회피','취급 후 세척'],pResponse:['보호구 착용','피부 노출 시 세척','의학조치'],pStorage:['잠금 저장'],pDisposal:['법규에 따라 폐기'],handling:['직접 접촉 회피','통풍 장소'],ppe:['방독마스크','보안경','안전장갑','보호복'],firstAid:['눈: 15분 세척','피부: 세척','흡입: 신선한 공기','섭취: 의사진찰'],isSpecial:true,specialMaterials:[{name:'결정질 실리카',nameEn:'Crystalline Silica',content:'15%',cas:'14808-60-7',acute:false,carcino:true,mutagen:false,repro:false}]},
-        {id:'NMP',name:'N-Methyl-2-pyrrolidone (NMP)',subtitle:'872-50-4',manufacturer:'(주)엘지화학',supplier:'(주)엘지화학',cas:'872-50-4',signalWord:'위험',pictograms:['GHS08','GHS07'],tags:['special'],hazards:['태아 손상 가능 (생식독성 1B)','눈 심한 자극','피부 자극','호흡기 자극'],pPrevention:['임신 중 취급 금지','증기 흡입 회피','보호구 착용'],pResponse:['피부: 세척','눈: 15분 세척 후 진찰'],pStorage:['밀폐 보관'],pDisposal:['법규 폐기'],handling:['가임여성 제한','국소배기','피부접촉 회피'],ppe:['방독마스크','보안경','내화학장갑','보호복'],firstAid:['눈: 15분 세척','피부: 세척','흡입: 신선공기','섭취: 진찰'],isSpecial:true,specialMaterials:[{name:'NMP',nameEn:'NMP',content:'99%',cas:'872-50-4',acute:false,carcino:false,mutagen:false,repro:true}]}
-    ];
+
+    // ⭐ [변경] MATERIALS: localStorage 로드 + 저장
+    let MATERIALS = JSON.parse(localStorage.getItem('pfm_materials') || 'null');
+    if(!MATERIALS || MATERIALS.length === 0){
+        // 초기 샘플 (원본 유지) — 실제 등록되지 않은 경우 데모용
+        MATERIALS = [
+            {id:'MC-12RHR',name:'MC-12RHR',subtitle:'1309-48-4 외 4종',manufacturer:'포스코퓨처엠 (054-290-0114)',supplier:'포스코퓨처엠',cas:'1309-48-4',signalWord:'위험',pictograms:['GHS08','GHS06','GHS09'],tags:[],hazards:['눈에 심한 자극','흡입 시 치명적','장기 손상 우려','수생생물에 유독'],pPrevention:['안전조치 이해 후 취급','흄·미스트 흡입 회피','취급 후 세척'],pResponse:['보호구 착용','피부 노출 시 세척','의학조치'],pStorage:['잠금 저장'],pDisposal:['법규에 따라 폐기'],handling:['직접 접촉 회피','통풍 장소'],ppe:['방독마스크','보안경','안전장갑','보호복'],firstAid:['눈: 15분 세척','피부: 세척','흡입: 신선한 공기','섭취: 의사진찰'],isSpecial:true,specialMaterials:[{name:'결정질 실리카',nameEn:'Crystalline Silica',content:'15%',cas:'14808-60-7',acute:false,carcino:true,mutagen:false,repro:false}],deptInfo:'광양 양극재 1공장 - 소성공정',processInfo:'소성',uploadedAt:new Date().toISOString()},
+            {id:'NMP',name:'N-Methyl-2-pyrrolidone (NMP)',subtitle:'872-50-4',manufacturer:'(주)엘지화학',supplier:'(주)엘지화학',cas:'872-50-4',signalWord:'위험',pictograms:['GHS08','GHS07'],tags:['special'],hazards:['태아 손상 가능 (생식독성 1B)','눈 심한 자극','피부 자극','호흡기 자극'],pPrevention:['임신 중 취급 금지','증기 흡입 회피','보호구 착용'],pResponse:['피부: 세척','눈: 15분 세척 후 진찰'],pStorage:['밀폐 보관'],pDisposal:['법규 폐기'],handling:['가임여성 제한','국소배기','피부접촉 회피'],ppe:['방독마스크','보안경','내화학장갑','보호복'],firstAid:['눈: 15분 세척','피부: 세척','흡입: 신선공기','섭취: 진찰'],isSpecial:true,specialMaterials:[{name:'NMP',nameEn:'NMP',content:'99%',cas:'872-50-4',acute:false,carcino:false,mutagen:false,repro:true}],deptInfo:'광양 양극재 1공장 - 소성공정',processInfo:'슬러리 믹싱',uploadedAt:new Date().toISOString()}
+        ];
+        saveMATERIALS();
+    }
+    function saveMATERIALS(){ localStorage.setItem('pfm_materials', JSON.stringify(MATERIALS)); }
 
     function makePictogramsHTML(codes, size='w-16 h-16 text-2xl'){
         if(!codes || codes.length === 0) return '<span class="text-xs text-gray-400">해당 없음</span>';
@@ -1227,24 +1541,25 @@
         }).join('');
     }
 
-    let currentFilter = 'all', currentSearch = '', selectedMaterialId = MATERIALS[0].id;
+    let currentFilter = 'all', currentSearch = '', selectedMaterialId = MATERIALS.length > 0 ? MATERIALS[0].id : null;
     function renderMaterialList(){
         const box = document.getElementById('materialList'); if(!box) return;
         const kw = currentSearch.trim().toLowerCase();
         const list = MATERIALS.filter(m=>{
-            if(currentFilter==='special' && !m.tags.includes('special')) return false;
-            if(currentFilter==='cmr' && !m.tags.includes('cmr')) return false;
-            if(kw && !(m.name+m.subtitle+m.cas).toLowerCase().includes(kw)) return false;
+            const tags = m.tags || [];
+            if(currentFilter==='special' && !m.isSpecial && !tags.includes('special')) return false;
+            if(currentFilter==='cmr' && !tags.includes('cmr')) return false;
+            if(kw && !(m.name+(m.subtitle||'')+(m.cas||'')).toLowerCase().includes(kw)) return false;
             return true;
         });
         box.innerHTML = list.map(m=>{
             const sel = m.id === selectedMaterialId;
             const badges = [];
-            if(m.tags.includes('special')) badges.push('<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded">특별관리</span>');
-            if(m.tags.includes('cmr')) badges.push('<span class="bg-orange-100 text-orange-700 text-[9px] font-bold px-1.5 py-0.5 rounded">CMR</span>');
+            if(m.isSpecial || (m.tags||[]).includes('special')) badges.push('<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded">특별관리</span>');
+            if((m.tags||[]).includes('cmr')) badges.push('<span class="bg-orange-100 text-orange-700 text-[9px] font-bold px-1.5 py-0.5 rounded">CMR</span>');
             return sel
-                ? `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-teal-600 text-white rounded-lg p-2.5 shadow-sm"><div class="flex items-center justify-between"><p class="text-xs font-bold">${m.name}</p><i class="fa-solid fa-check text-[10px]"></i></div><p class="text-[10px] text-teal-100 mt-0.5">${m.subtitle}</p></button>`
-                : `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5"><p class="text-xs font-bold text-gray-800">${m.name}</p><p class="text-[10px] text-gray-500 mt-0.5">${m.subtitle}</p>${badges.length?`<div class="flex gap-1 mt-1">${badges.join('')}</div>`:''}</button>`;
+                ? `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-teal-600 text-white rounded-lg p-2.5 shadow-sm"><div class="flex items-center justify-between"><p class="text-xs font-bold">${m.name}</p><i class="fa-solid fa-check text-[10px]"></i></div><p class="text-[10px] text-teal-100 mt-0.5">${m.subtitle||m.cas||''}</p></button>`
+                : `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5"><p class="text-xs font-bold text-gray-800">${m.name}</p><p class="text-[10px] text-gray-500 mt-0.5">${m.subtitle||m.cas||''}</p>${badges.length?`<div class="flex gap-1 mt-1">${badges.join('')}</div>`:''}</button>`;
         }).join('') || '<p class="text-[11px] text-gray-400 text-center py-6">검색 결과 없음</p>';
     }
     function selectMaterial(id){ selectedMaterialId=id; renderMaterialList(); applyMaterialToForms(MATERIALS.find(m=>m.id===id)); }
@@ -1267,7 +1582,7 @@
     }
     function applySpecialForm(m){
         const badge=document.getElementById('specialBadge'), banner=document.getElementById('notSpecialBanner'), tbody=document.getElementById('specialTableBody');
-        if(m.isSpecial && m.specialMaterials.length>0){
+        if(m.isSpecial && m.specialMaterials && m.specialMaterials.length>0){
             badge.classList.remove('hidden'); banner.classList.add('hidden');
             tbody.innerHTML = m.specialMaterials.map((sm,idx)=>{
                 const chk = v => v?`<span class="inline-flex w-6 h-6 border-2 border-gray-800 text-base font-black items-center justify-center">✓</span>`:`<span class="inline-block w-6 h-6 border-2 border-gray-800"></span>`;
@@ -1306,10 +1621,8 @@
     function goToLabelTab(){ document.querySelector('.tab-btn[data-tab="tab-label"]').click(); }
 
     /* =========================================================
-       [4] ⭐ ① MSDS 업로드 (개선: 실제 PDF 파싱 + 지식베이스)
+       [4] ⭐ ① MSDS 업로드 (기존 유지)
        ========================================================= */
-
-    // ⭐ [신규] MSDS 지식베이스: 파일명·본문 키워드 기반 실제 데이터 매칭
     const MSDS_KNOWLEDGE_BASE = [
         {
             keywords: ['aramco', 'ultra', '윤활', 'lubricant', '기유', 'base oil', 'paraffinic'],
@@ -1416,7 +1729,6 @@
         }
     ];
 
-    // ⭐ [신규] 매칭 실패 시 폴백 템플릿
     const FALLBACK_TEMPLATE = {
         name:'(자동추출 실패 - 원본 확인 필요)',
         subtitle:'-',
@@ -1438,14 +1750,13 @@
         specialMaterials:[]
     };
 
-    // ⭐ [신규] PDF 텍스트 추출 (pdf.js)
     async function extractPdfText(file){
         try{
             if(!window.pdfjsLib) return '';
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
             let text = '';
-            const maxPages = Math.min(pdf.numPages, 5); // 처음 5페이지만
+            const maxPages = Math.min(pdf.numPages, 5);
             for(let i=1; i<=maxPages; i++){
                 const page = await pdf.getPage(i);
                 const content = await page.getTextContent();
@@ -1458,7 +1769,6 @@
         }
     }
 
-    // ⭐ [교체] 실제 AI 파싱 로직 — 파일명 + PDF 본문 → 지식베이스 매칭
     async function parseMSDSFile(file){
         const fileName = file.name;
         const searchText = fileName.toLowerCase();
@@ -1468,7 +1778,6 @@
         }
         const combined = searchText + ' ' + pdfText;
 
-        // 지식베이스 매칭
         let matched = null;
         for(const kb of MSDS_KNOWLEDGE_BASE){
             if(kb.keywords.some(kw => combined.includes(kw.toLowerCase()))){
@@ -1477,18 +1786,15 @@
             }
         }
 
-        // PDF에서 CAS 번호 자동 추출 시도 (정규식)
         let extractedCas = null;
         if(pdfText){
             const casMatch = pdfText.match(/(\d{2,7}-\d{2}-\d)/);
             if(casMatch) extractedCas = casMatch[1];
         }
 
-        // 결과 조립 (deep copy)
         const base = matched ? JSON.parse(JSON.stringify(matched)) : JSON.parse(JSON.stringify(FALLBACK_TEMPLATE));
         base.id = 'MSDS_'+Date.now()+'_'+Math.floor(Math.random()*1000);
 
-        // 파일명에서 제품명 힌트 추출 (S-MSDS-0146(aramcoULTRA 8 윤활기유)-Rev 4.pdf → aramcoULTRA 8 윤활기유)
         const fnameMatch = fileName.match(/\(([^)]+)\)/);
         if(fnameMatch && !matched){
             base.name = fnameMatch[1];
@@ -1513,8 +1819,6 @@
         if(msg){ const log=document.getElementById('progressLog'); const p=document.createElement('p'); p.innerHTML=`<i class="fa-solid fa-check text-emerald-500 mr-1"></i>${msg}`; log.appendChild(p); log.scrollTop=log.scrollHeight; }
     }
     const sleep = ms => new Promise(r=>setTimeout(r,ms));
-
-    // ⭐ [신규] 마지막 파싱 결과 임시 저장 (등록 버튼용)
     let lastParsedMaterials = [];
 
     async function handleMSDSFiles(files){
@@ -1535,11 +1839,8 @@
         }
         updateProgress(100,'🎉 파싱 완료 — 아래 「AI 자동분석 및 등록」 버튼을 눌러 확정하세요'); await sleep(300);
 
-        // 결과 표시
         document.getElementById('parseResult').classList.remove('hidden');
         document.getElementById('parseResultSummary').innerHTML = parsedList.map(p=>`<b>${p.name}</b>`).join(', ');
-
-        // ⭐ [신규] 상세 파싱 결과 카드
         document.getElementById('parseDetail').innerHTML = parsedList.map(p=>`
             <div class="border-b border-emerald-100 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
                 <p class="font-bold text-emerald-900">📦 ${p.name}</p>
@@ -1553,17 +1854,13 @@
             </div>
         `).join('');
 
-        // 임시 저장 + 폼·미리보기 자동 채움
         lastParsedMaterials = parsedList;
         const first = parsedList[0];
         const regProduct = document.getElementById('reg-product');
         if(regProduct) regProduct.value = first.name;
-
-        // ⭐ AI 미리보기 사이드 갱신
         updateAIPreview(first);
     }
 
-    // ⭐ [신규] AI 미리보기 갱신
     function updateAIPreview(m){
         const box = document.getElementById('aiPreviewBody');
         if(!box) return;
@@ -1614,7 +1911,6 @@
         `;
     }
 
-    // ⭐ [신규] 「AI 자동분석 및 등록」 버튼 실동작
     function registerMaterial(){
         const product = document.getElementById('reg-product').value.trim();
         const dept = document.getElementById('reg-dept').value;
@@ -1627,9 +1923,8 @@
         let firstId = null;
 
         if(lastParsedMaterials && lastParsedMaterials.length > 0){
-            // 파싱된 결과를 MATERIALS 앞쪽에 추가
             lastParsedMaterials.forEach((m, i)=>{
-                if(i===0) m.name = product; // 사용자가 수정한 이름 반영
+                if(i===0) m.name = product;
                 m.deptInfo = dept;
                 m.processInfo = process;
                 m.usageInfo = usage;
@@ -1639,7 +1934,6 @@
             showToast(`✅ ${lastParsedMaterials.length}건 등록 완료 → ③ 경고표지 탭으로 이동합니다`);
             lastParsedMaterials = [];
         } else {
-            // 파일 없이 수동 등록
             const manual = JSON.parse(JSON.stringify(FALLBACK_TEMPLATE));
             manual.id = 'MAT_'+Date.now();
             manual.name = product;
@@ -1647,28 +1941,29 @@
             manual.deptInfo = dept;
             manual.processInfo = process;
             manual.usageInfo = usage;
+            manual.uploadedAt = new Date().toISOString();
             MATERIALS.unshift(manual);
             firstId = manual.id;
             showToast('✅ 수동 등록 완료 → ③ 경고표지 탭으로 이동합니다');
         }
 
-        // 등록된 물질을 선택 상태로 만들고 폼에 반영
+        // ⭐ localStorage 저장 + ②탭 자동 반영
+        saveMATERIALS();
+
         selectedMaterialId = firstId;
         renderMaterialList();
         applyMaterialToForms(MATERIALS.find(m=>m.id===firstId));
+        renderListTable(); // ②탭 즉시 갱신
 
-        // 폼 초기화 + ③ 탭 이동
         clearRegForm();
         setTimeout(()=>goToLabelTab(), 800);
     }
 
-    // ⭐ [신규] 폼 초기화
     function clearRegForm(){
         const ids = ['reg-product','reg-process','reg-usage','reg-dept'];
         ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
         document.getElementById('uploadProgress').classList.add('hidden');
         document.getElementById('parseResult').classList.add('hidden');
-        // 미리보기는 기본 상태로 되돌림 (초기 HTML 유지)
     }
 
     /* =========================================================
@@ -1919,6 +2214,10 @@
         document.getElementById('k5-soon').innerHTML = soon+'<span class="text-xs text-gray-500"> 명</span>';
         document.getElementById('k5-expired').innerHTML = expired+'<span class="text-xs text-gray-500"> 명</span>';
 
+        // 상단 헤더 특수건진 인원 갱신
+        const hdrHealth = document.getElementById('hdr-health');
+        if(hdrHealth) hdrHealth.textContent = healths.length;
+
         document.querySelectorAll('#healthBody td[contenteditable]').forEach(td=>{
             td.onblur = ()=>{
                 const idx = td.parentElement.dataset.idx;
@@ -2024,7 +2323,7 @@
         if(si) si.addEventListener('input', e=>{ currentSearch=e.target.value; renderMaterialList(); });
 
         renderMaterialList();
-        applyMaterialToForms(MATERIALS.find(m=>m.id===selectedMaterialId));
+        if(MATERIALS.length > 0) applyMaterialToForms(MATERIALS.find(m=>m.id===selectedMaterialId));
 
         // ① MSDS 업로드
         const zone=document.getElementById('uploadZone'), input=document.getElementById('msdsFileInput');
@@ -2044,15 +2343,27 @@
             });
         }
 
+        // ⭐ [신규] ②탭 검색 입력 Enter 키
+        const f2Search = document.getElementById('f2-search');
+        if(f2Search){
+            f2Search.addEventListener('keydown', e=>{
+                if(e.key==='Enter'){ e.preventDefault(); applyFilter2(); }
+            });
+        }
+
         // ⭐ ④ ⑤ 초기 렌더
         renderMat(materials);
         renderHealth();
 
-        // ⭐ ② 초기 렌더 + API 연결 확인
+        // ⭐ ② 초기 렌더 + API 연결 확인 + 헤더 갱신
         renderListTable();
-        updateInspectKpi();
+        updateAllKPI();
         checkApiHealth();
-    });
-    </script>
-</body>
-</html>
+
+        // 상단 헤더 KPI 초기값
+        const hdrEnvSoon = document.getElementById('hdr-envSoon');
+        if(hdrEnvSoon){
+            const today=new Date(); let soon=0;
+            materials.forEach(m=>{
+                const next=new Date(m.date); next.setMonth(next.getMonth()+m.cycle);
+                const d=Math.
