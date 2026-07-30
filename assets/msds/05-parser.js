@@ -46,7 +46,7 @@ async function parseMSDSFile(file){
         for(const cas of kb.casNumbers){
             if(topCas.includes(cas)){
                 score += 100;
-                reasons.push(`CAS ${cas} 정확매칭`);
+                reasons.push('CAS ' + cas + ' 정확매칭');
                 break;
             }
         }
@@ -56,14 +56,14 @@ async function parseMSDSFile(file){
             const kwLower = kw.toLowerCase();
             if(fileNameLower.includes(kwLower)){
                 score += 50;
-                reasons.push(`파일명 "${kw}"`);
+                reasons.push('파일명 "' + kw + '"');
             }
             if(pdfHead.includes(kwLower)){
                 score += 30;
-                reasons.push(`PDF 상단 "${kw}"`);
+                reasons.push('PDF 상단 "' + kw + '"');
             } else if(pdfTextLower.includes(kwLower)){
                 score += 10;
-                reasons.push(`PDF 본문 "${kw}"`);
+                reasons.push('PDF 본문 "' + kw + '"');
             }
         }
 
@@ -73,14 +73,14 @@ async function parseMSDSFile(file){
             }
         }
 
-        return { kb, score, reasons };
+        return { kb: kb, score: score, reasons: reasons };
     });
 
     scored.sort((a,b)=>b.score - a.score);
     const best = scored[0];
     const second = scored[1];
 
-    console.log('[MSDS 매칭 점수]', scored.map(s=>`${s.kb.id}:${s.score}`).join(' / '));
+    console.log('[MSDS 매칭 점수]', scored.map(s=>s.kb.id + ':' + s.score).join(' / '));
 
     let matched = null;
     let confidence = '낮음 (원본 확인 필요)';
@@ -89,15 +89,15 @@ async function parseMSDSFile(file){
     if(best && best.score >= 30){
         matched = best.kb.template;
         matchReason = best.reasons.join(', ');
-        const gap = best.score - (second?.score || 0);
-        const hasCasMatch = best.reasons.some(r=>r.includes('CAS'));
+        const gap = best.score - (second ? second.score : 0);
+        const hasCasMatch = best.reasons.some(r=>r.indexOf('CAS')>=0);
 
         if(hasCasMatch && best.score >= 100){
             confidence = '매우 높음 (CAS 정확매칭)';
         } else if(best.score >= 80 || gap >= 30){
             confidence = '높음 (지식베이스 매칭)';
         } else if(gap < 20){
-            confidence = `애매 (${best.kb.id} vs ${second?.kb.id} - 원본 확인 권장)`;
+            confidence = '애매 (' + best.kb.id + ' vs ' + (second ? second.kb.id : '') + ' - 원본 확인 권장)';
             matched = null;
         } else {
             confidence = '보통 (키워드 매칭)';
@@ -107,7 +107,7 @@ async function parseMSDSFile(file){
     const base = matched
         ? JSON.parse(JSON.stringify(matched))
         : JSON.parse(JSON.stringify(FALLBACK_TEMPLATE));
-    base.id = 'MSDS_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    base.id = 'MSDS_' + Date.now() + '_' + Math.floor(Math.random()*1000);
 
     const fnameMatch = fileName.match(/\(([^)]+)\)/);
     if(fnameMatch && !matched){
@@ -151,7 +151,31 @@ async function parseMSDSFile(file){
 }
 
 /* =========================================================
-   MSDS 3번 구성성분 파서 (v5: 정규식 안전 재작성)
+   ⭐⭐⭐ 문자열 치환 유틸 (정규식 없이 안전하게)
+   ========================================================= */
+function stripPunctuation(str){
+    // ⭐ 정규식 대신 하나씩 replaceAll 로 처리 (완전히 안전)
+    const chars = [',', '.', '/', '(', ')', '[', ']', '|', '{', '}', '<', '>', '"', "'", '`'];
+    let out = str;
+    for(const c of chars){
+        // split/join 방식은 정규식을 전혀 사용하지 않음
+        out = out.split(c).join(' ');
+    }
+    return out;
+}
+
+function stripBracketedName(str){
+    // ⭐ "(이명)", "[異名]", "(異名)", "[이명]" 같은 패턴 제거 - 문자열 처리로
+    const patterns = ['(異名)', '[異名]', '(이명)', '[이명]', '(異名', '[異名', '異名)', '異名]'];
+    let out = str;
+    for(const p of patterns){
+        out = out.split(p).join(' ');
+    }
+    return out;
+}
+
+/* =========================================================
+   MSDS 3번 구성성분 파서 (v6: 정규식 완전 안전화)
    ========================================================= */
 function extractComposition(pdfText){
     const result = {
@@ -163,7 +187,7 @@ function extractComposition(pdfText){
         return result;
     }
 
-    // ⭐ 3번 섹션 시작점 탐색
+    // ⭐ 3번 섹션 시작점 탐색 (안전한 정규식)
     const startMatch = pdfText.match(/3\s*[.)]?\s*구성성분/);
     if(!startMatch){
         result.warnings.push('3번 "구성성분의 명칭 및 함유량" 항목을 찾지 못했습니다');
@@ -171,7 +195,7 @@ function extractComposition(pdfText){
     }
     const startIdx = startMatch.index;
 
-    // ⭐ 4번 섹션 시작점 탐색 (여러 후보)
+    // ⭐ 4번 섹션 시작점 탐색
     const endCandidates = [
         /4\s*[.)]\s*응급/,
         /4\s*[.)]\s*폭발/,
@@ -180,7 +204,8 @@ function extractComposition(pdfText){
         /4\s*[.)]\s*[가-힣]/
     ];
     let endIdx = pdfText.length;
-    for(const re of endCandidates){
+    for(let ri=0; ri<endCandidates.length; ri++){
+        const re = endCandidates[ri];
         const m = pdfText.substring(startIdx + 10).match(re);
         if(m){
             const abs = startIdx + 10 + m.index;
@@ -209,33 +234,52 @@ function extractComposition(pdfText){
     ]);
     const VERB_ENDINGS = /(시오|하시오|하세요|합니다|위해|방지|조치|흡수|누출물|주의|경고)$/;
 
-    casHits.forEach((hit, i) => {
+    for(let i=0; i<casHits.length; i++){
+        const hit = casHits[i];
         const cas = hit[1];
         const hitStart = hit.index;
         const hitEnd = hit.index + hit[0].length;
 
-        // ⭐ 이 CAS의 왼쪽에서 물질명 후보 추출 (앞 CAS 뒤 ~ 현재 CAS 시작 60자 이내)
+        // ⭐ 이 CAS의 왼쪽에서 물질명 후보 추출
         const prevEnd = i === 0
             ? Math.max(0, hitStart - 60)
             : (casHits[i-1].index + casHits[i-1][0].length);
         let nameArea = section3.substring(Math.max(prevEnd, hitStart - 60), hitStart);
 
-        // ⭐⭐⭐ 정규식 안전 재작성: 모든 특수문자는 문자 클래스에서 escape, 줄바꿈 절대 X
+        // ⭐⭐⭐ 정규식 대신 문자열 replaceAll(split/join) 로 처리 - 100% 안전
         nameArea = nameArea
-            .replace(/구성성분[의]?\s*명칭\s*및?\s*함유량/g, ' ')
-            .replace(/화학물질명/g, ' ')
-            .replace(/관용명[\s및]*이명/g, ' ')
-            .replace(/[(
-\[]異?名[)\]
-]/g, ' ')           // ⭐ 줄바꿈 제거 · 한 줄로 안전
-            .replace(/CAS\s*번호[\s또는]*식별번호/gi, ' ')
-            .replace(/함유량\s*\(?%?\)?/g, ' ')
-            .replace(/[,./()
-\[\]
-|]/g, ' ')              // ⭐ 줄바꿈 제거 · 한 줄로 안전
-            .replace(/\d+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+            .split('구성성분의 명칭 및 함유량').join(' ')
+            .split('구성성분 명칭 및 함유량').join(' ')
+            .split('구성성분 및 함유량').join(' ')
+            .split('구성성분의 명칭').join(' ')
+            .split('구성성분').join(' ')
+            .split('화학물질명').join(' ')
+            .split('관용명 및 이명').join(' ')
+            .split('관용명').join(' ')
+            .split('이명').join(' ');
+
+        // ⭐ 괄호로 둘러싸인 "이명"/"異名" 제거
+        nameArea = stripBracketedName(nameArea);
+
+        // ⭐ CAS 번호/식별번호 헤더 문구 제거
+        nameArea = nameArea
+            .split('CAS 번호 또는 식별번호').join(' ')
+            .split('CAS번호 또는 식별번호').join(' ')
+            .split('CAS 번호').join(' ')
+            .split('CAS번호').join(' ')
+            .split('식별번호').join(' ')
+            .split('함유량(%)').join(' ')
+            .split('함유량 (%)').join(' ')
+            .split('함유량').join(' ');
+
+        // ⭐ 구두점 제거
+        nameArea = stripPunctuation(nameArea);
+
+        // ⭐ 숫자 제거 (안전한 정규식)
+        nameArea = nameArea.replace(/\d+/g, ' ');
+
+        // ⭐ 공백 정규화
+        nameArea = nameArea.replace(/\s+/g, ' ').trim();
 
         const tokens = nameArea.split(' ')
             .map(t => t.trim())
@@ -263,6 +307,7 @@ function extractComposition(pdfText){
         let content = '-';
         let contentNum = 0;
 
+        // ⭐ 안전한 정규식만 사용 (문자 클래스 안에 escape 필요 문자 없음)
         const patterns = [
             { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-∼–]\s*(\d{1,3}(?:\.\d+)?)\s*%/, range: true },
             { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-∼–]\s*(\d{1,3}(?:\.\d+)?)(?!\d)/, range: true },
@@ -270,7 +315,8 @@ function extractComposition(pdfText){
             { re: /(?:^|\s)([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)(?!\d)/, range: false }
         ];
 
-        for(const p of patterns){
+        for(let pi=0; pi<patterns.length; pi++){
+            const p = patterns[pi];
             const m = contentArea.match(p.re);
             if(!m) continue;
 
@@ -279,7 +325,7 @@ function extractComposition(pdfText){
                 const hi = parseFloat(m[2]);
                 if(lo >= 0 && lo <= 100 && hi >= 0 && hi <= 100 && lo <= hi){
                     if(lo < 5 && (hi - lo) < 0.1){ continue; }
-                    content = `${lo}~${hi}%`;
+                    content = lo + '~' + hi + '%';
                     contentNum = (lo + hi) / 2;
                     break;
                 }
@@ -293,31 +339,37 @@ function extractComposition(pdfText){
             }
         }
 
-        if(!result.items.some(it => it.cas === cas)){
+        // 중복 CAS 체크
+        let duplicate = false;
+        for(let k=0; k<result.items.length; k++){
+            if(result.items[k].cas === cas){ duplicate = true; break; }
+        }
+        if(!duplicate){
             result.items.push({
                 name: name, cas: cas, content: content, contentNum: contentNum
             });
         }
-    });
+    }
 
     result.sum = Math.round(result.items.reduce((s,it)=>s + it.contentNum, 0) * 10) / 10;
 
     if(result.sum >= 95 && result.sum <= 105){
         result.valid = true;
     } else if(result.sum < 95){
-        result.warnings.push(`⚠️ 합계 ${result.sum}% - 누락 성분이 있을 수 있습니다 (100% 미달)`);
+        result.warnings.push('⚠️ 합계 ' + result.sum + '% - 누락 성분이 있을 수 있습니다 (100% 미달)');
     } else {
-        result.warnings.push(`⚠️ 합계 ${result.sum}% - 중복 추출 가능성이 있습니다 (100% 초과)`);
+        result.warnings.push('⚠️ 합계 ' + result.sum + '% - 중복 추출 가능성이 있습니다 (100% 초과)');
     }
 
-    result.items.forEach((it, i)=>{
+    for(let i=0; i<result.items.length; i++){
+        const it = result.items[i];
         if(it.name === '(추출실패)' || it.name === '(미상)'){
-            result.warnings.push(`${i+1}번째 성분: 물질명 추출 실패 - 수동 확인 필요`);
+            result.warnings.push((i+1) + '번째 성분: 물질명 추출 실패 - 수동 확인 필요');
         }
         if(!it.content || it.content === '-'){
-            result.warnings.push(`${i+1}번째 성분 (CAS ${it.cas}): 함유량 추출 실패`);
+            result.warnings.push((i+1) + '번째 성분 (CAS ' + it.cas + '): 함유량 추출 실패');
         }
-    });
+    }
 
     console.log('[extractComposition] 결과:', {
         items: result.items,
@@ -357,96 +409,69 @@ function renderCompositionReview(parsedMaterial){
         : (sum < 95 ? 'bg-red-100 text-red-800 border-red-300' : 'bg-amber-100 text-amber-800 border-amber-300');
     const sumIcon = valid ? '✅' : '⚠️';
 
-    let html = `
-    <div class="p-4 border-2 ${valid?'border-green-300 bg-green-50':'border-amber-300 bg-amber-50'} rounded-lg">
-        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h4 class="font-bold text-slate-800 text-sm">
-                📋 MSDS 3번 「구성성분의 명칭 및 함유량」 자동추출 결과
-            </h4>
-            <span class="px-3 py-1 text-xs font-bold rounded-full border ${sumBadgeColor}">
-                ${sumIcon} 합계 ${sum}%
-            </span>
-        </div>
+    let html = ''
+        + '<div class="p-4 border-2 ' + (valid?'border-green-300 bg-green-50':'border-amber-300 bg-amber-50') + ' rounded-lg">'
+        +   '<div class="flex items-center justify-between mb-3 flex-wrap gap-2">'
+        +     '<h4 class="font-bold text-slate-800 text-sm">📋 MSDS 3번 「구성성분의 명칭 및 함유량」 자동추출 결과</h4>'
+        +     '<span class="px-3 py-1 text-xs font-bold rounded-full border ' + sumBadgeColor + '">'
+        +       sumIcon + ' 합계 ' + sum + '%'
+        +     '</span>'
+        +   '</div>'
+        +   '<table class="comp-review-table">'
+        +     '<thead>'
+        +       '<tr>'
+        +         '<th style="width:40px">#</th>'
+        +         '<th>물질명</th>'
+        +         '<th style="width:140px">CAS No.</th>'
+        +         '<th style="width:110px">함유량(%)</th>'
+        +         '<th style="width:50px">삭제</th>'
+        +       '</tr>'
+        +     '</thead>'
+        +     '<tbody id="compReviewTbody">';
 
-        <table class="comp-review-table">
-            <thead>
-                <tr>
-                    <th style="width:40px">#</th>
-                    <th>물질명</th>
-                    <th style="width:140px">CAS No.</th>
-                    <th style="width:110px">함유량(%)</th>
-                    <th style="width:50px">삭제</th>
-                </tr>
-            </thead>
-            <tbody id="compReviewTbody">`;
-
-    comp.forEach((item, i)=>{
-        const nameErr = item.name.includes('추출실패') || item.name.includes('미상');
+    for(let i=0; i<comp.length; i++){
+        const item = comp[i];
+        const nameErr = item.name.indexOf('추출실패')>=0 || item.name.indexOf('미상')>=0;
         const contErr = !item.content || item.content === '-';
-        html += `
-            <tr>
-                <td style="text-align:center">${i+1}</td>
-                <td>
-                    <input type="text" value="${item.name.replace(/"/g,'&quot;')}"
-                        class="${nameErr?'error':''}"
-                        onchange="updateCompItem(${i},'name',this.value)">
-                </td>
-                <td>
-                    <input type="text" value="${item.cas}"
-                        style="font-family:monospace;font-size:11px"
-                        onchange="updateCompItem(${i},'cas',this.value)">
-                </td>
-                <td>
-                    <input type="text" value="${item.content}"
-                        class="${contErr?'error':''}"
-                        style="text-align:center"
-                        onchange="updateCompItem(${i},'content',this.value)">
-                </td>
-                <td style="text-align:center">
-                    <button onclick="removeCompItem(${i})" style="color:#dc2626;font-weight:bold;cursor:pointer;background:none;border:none;font-size:14px">✕</button>
-                </td>
-            </tr>`;
-    });
-
-    html += `
-            </tbody>
-        </table>
-
-        <div class="mt-3 flex gap-2 flex-wrap">
-            <button onclick="addCompItem()" class="px-3 py-1.5 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 font-semibold">
-                ➕ 성분 추가
-            </button>
-            <button onclick="recalcCompSum()" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold">
-                🔄 합계 재계산
-            </button>
-            <button onclick="showRawSection3()" class="px-3 py-1.5 text-xs bg-slate-200 text-slate-700 rounded hover:bg-slate-300 font-semibold">
-                📄 MSDS 원본 3번 항목 보기
-            </button>
-        </div>`;
-
-    if(warnings.length > 0){
-        html += `
-        <div class="mt-3 p-3 bg-white border-l-4 border-amber-500 rounded">
-            <div class="text-xs font-bold text-amber-800 mb-1">⚠️ 검토 필요 항목 (${warnings.length}건)</div>
-            <ul class="text-[11px] text-amber-900 space-y-0.5 ml-4 list-disc">
-                ${warnings.map(w=>`<li>${w}</li>`).join('')}
-            </ul>
-        </div>`;
+        const safeName = item.name.split('"').join('&quot;');
+        html += ''
+            + '<tr>'
+            +   '<td style="text-align:center">' + (i+1) + '</td>'
+            +   '<td><input type="text" value="' + safeName + '" class="' + (nameErr?'error':'') + '" onchange="updateCompItem(' + i + ',\'name\',this.value)"></td>'
+            +   '<td><input type="text" value="' + item.cas + '" style="font-family:monospace;font-size:11px" onchange="updateCompItem(' + i + ',\'cas\',this.value)"></td>'
+            +   '<td><input type="text" value="' + item.content + '" class="' + (contErr?'error':'') + '" style="text-align:center" onchange="updateCompItem(' + i + ',\'content\',this.value)"></td>'
+            +   '<td style="text-align:center"><button onclick="removeCompItem(' + i + ')" style="color:#dc2626;font-weight:bold;cursor:pointer;background:none;border:none;font-size:14px">✕</button></td>'
+            + '</tr>';
     }
 
-    html += `
-        <div class="mt-4 p-3 bg-white border-2 border-slate-400 rounded flex items-start gap-3">
-            <input type="checkbox" id="compReviewedChk" class="w-5 h-5 mt-0.5"
-                ${parsedMaterial.compositionReviewed?'checked':''}
-                onchange="toggleCompReviewed(this.checked)">
-            <label for="compReviewedChk" class="text-xs font-semibold text-slate-800 cursor-pointer flex-1">
-                위 구성성분 정보를 MSDS 원본과 대조하여 <span class="text-red-600 font-bold">검수 완료</span>하였습니다.
-                <span class="block text-[11px] text-slate-500 mt-1 font-normal">
-                    ※ 검수 완료해야 「AI 자동분석 및 등록」 버튼이 활성화됩니다.
-                </span>
-            </label>
-        </div>
-    </div>`;
+    html += ''
+        +     '</tbody>'
+        +   '</table>'
+        +   '<div class="mt-3 flex gap-2 flex-wrap">'
+        +     '<button onclick="addCompItem()" class="px-3 py-1.5 text-xs bg-slate-600 text-white rounded hover:bg-slate-700 font-semibold">➕ 성분 추가</button>'
+        +     '<button onclick="recalcCompSum()" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold">🔄 합계 재계산</button>'
+        +     '<button onclick="showRawSection3()" class="px-3 py-1.5 text-xs bg-slate-200 text-slate-700 rounded hover:bg-slate-300 font-semibold">📄 MSDS 원본 3번 항목 보기</button>'
+        +   '</div>';
+
+    if(warnings.length > 0){
+        html += ''
+            + '<div class="mt-3 p-3 bg-white border-l-4 border-amber-500 rounded">'
+            +   '<div class="text-xs font-bold text-amber-800 mb-1">⚠️ 검토 필요 항목 (' + warnings.length + '건)</div>'
+            +   '<ul class="text-[11px] text-amber-900 space-y-0.5 ml-4 list-disc">'
+            +     warnings.map(w=>'<li>' + w + '</li>').join('')
+            +   '</ul>'
+            + '</div>';
+    }
+
+    html += ''
+        +   '<div class="mt-4 p-3 bg-white border-2 border-slate-400 rounded flex items-start gap-3">'
+        +     '<input type="checkbox" id="compReviewedChk" class="w-5 h-5 mt-0.5" ' + (parsedMaterial.compositionReviewed?'checked':'') + ' onchange="toggleCompReviewed(this.checked)">'
+        +     '<label for="compReviewedChk" class="text-xs font-semibold text-slate-800 cursor-pointer flex-1">'
+        +       '위 구성성분 정보를 MSDS 원본과 대조하여 <span class="text-red-600 font-bold">검수 완료</span>하였습니다.'
+        +       '<span class="block text-[11px] text-slate-500 mt-1 font-normal">※ 검수 완료해야 「AI 자동분석 및 등록」 버튼이 활성화됩니다.</span>'
+        +     '</label>'
+        +   '</div>'
+        + '</div>';
 
     container.innerHTML = html;
     container.classList.remove('hidden');
@@ -496,7 +521,7 @@ function recalcCompSum(){
     m.compositionSum = Math.round(m.composition.reduce((s,it)=>s+(it.contentNum||0),0)*10)/10;
     m.compositionValid = (m.compositionSum >= 95 && m.compositionSum <= 105);
     renderCompositionReview(m);
-    showToast(`합계 재계산: ${m.compositionSum}%`);
+    showToast('합계 재계산: ' + m.compositionSum + '%');
 }
 
 function toggleCompReviewed(checked){
@@ -518,17 +543,18 @@ function showRawSection3(){
         return;
     }
     const w = window.open('', '_blank', 'width=800,height=600');
-    w.document.write(`
-        <html><head><title>MSDS 3번 항목 원본</title>
-        <meta charset="UTF-8">
-        <style>
-            body{font-family:'Malgun Gothic',sans-serif;padding:20px;white-space:pre-wrap;line-height:1.7;font-size:13px;color:#333}
-            h3{color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:8px}
-            .box{background:#f8fafc;border-left:4px solid #0d9488;padding:15px;border-radius:4px;margin-top:10px}
-        </style>
-        </head><body>
-        <h3>📄 MSDS 3번 「구성성분의 명칭 및 함유량」 원본 텍스트</h3>
-        <p style="color:#64748b;font-size:11px">📁 원본파일: ${m.sourceFile||''}</p>
-        <div class="box">${m.compositionRawText.replace(/</g,'&lt;')}</div>
-        </body></html>`);
+    const safeText = m.compositionRawText.split('<').join('&lt;');
+    w.document.write(''
+        + '<html><head><title>MSDS 3번 항목 원본</title>'
+        + '<meta charset="UTF-8">'
+        + '<style>'
+        +   'body{font-family:\'Malgun Gothic\',sans-serif;padding:20px;white-space:pre-wrap;line-height:1.7;font-size:13px;color:#333}'
+        +   'h3{color:#0d9488;border-bottom:2px solid #0d9488;padding-bottom:8px}'
+        +   '.box{background:#f8fafc;border-left:4px solid #0d9488;padding:15px;border-radius:4px;margin-top:10px}'
+        + '</style>'
+        + '</head><body>'
+        + '<h3>📄 MSDS 3번 「구성성분의 명칭 및 함유량」 원본 텍스트</h3>'
+        + '<p style="color:#64748b;font-size:11px">📁 원본파일: ' + (m.sourceFile||'') + '</p>'
+        + '<div class="box">' + safeText + '</div>'
+        + '</body></html>');
 }
