@@ -1,133 +1,431 @@
 /* =========================================================
-   [1] 메인 탭 전환
+   [진행률 표시·MSDS 파일 처리·등록]
    ========================================================= */
-document.addEventListener('DOMContentLoaded', ()=>{
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetId = btn.getAttribute('data-tab');
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.getElementById(targetId).classList.add('active');
-            if(targetId === 'tab-list') renderListTable();
-        });
-    });
-});
+function updateProgress(pct,msg){
+    let safePct = Number(pct);
+    if(!isFinite(safePct)) safePct = 0;
+    if(safePct < 0) safePct = 0;
+    if(safePct > 100) safePct = 100;
 
-/* =========================================================
-   [2] 공통 유틸
-   ========================================================= */
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('on');
-    setTimeout(() => t.classList.remove('on'), 2200);
-}
-function closeDetailPanel() {
-    document.getElementById('detailPanel').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-/* =========================================================
-   [3] ③ GHS 픽토그램·물질 데이터
-   ========================================================= */
-const GHS_PICTOGRAMS = {
-    GHS01:{icon:'fa-burst',name:'폭발성'}, GHS02:{icon:'fa-fire',name:'인화성'},
-    GHS03:{icon:'fa-fire-flame-curved',name:'산화성'}, GHS04:{icon:'fa-gauge',name:'고압가스'},
-    GHS05:{icon:'fa-droplet',name:'부식성'}, GHS06:{icon:'fa-skull-crossbones',name:'급성독성'},
-    GHS07:{icon:'fa-triangle-exclamation',name:'경고(자극성)'},
-    GHS08:{icon:'fa-person-dots-from-line',name:'건강유해성'}, GHS09:{icon:'fa-fish',name:'수생환경유해성'}
-};
-
-// ⭐ 샘플 데이터 제거 - 빈 배열로 시작 (모든 회사에서 사용 가능)
-let MATERIALS = JSON.parse(localStorage.getItem('pfm_materials') || '[]');
-function saveMATERIALS(){ localStorage.setItem('pfm_materials', JSON.stringify(MATERIALS)); }
-
-function makePictogramsHTML(codes, size='w-16 h-16 text-2xl'){
-    if(!codes || codes.length === 0) return '<span class="text-xs text-gray-400">해당 없음</span>';
-    return codes.map(code=>{
-        const g = GHS_PICTOGRAMS[code]; if(!g) return '';
-        const parts = size.split(' ');
-        return `<div class="${parts[0]} ${parts[1]} border-[3px] border-red-600 rotate-45 flex items-center justify-center bg-white" title="${g.name}"><i class="fa-solid ${g.icon} ${parts[2]} text-black -rotate-45"></i></div>`;
-    }).join('');
-}
-
-let currentFilter = 'all', currentSearch = '', selectedMaterialId = MATERIALS.length > 0 ? MATERIALS[0].id : null;
-function renderMaterialList(){
-    const box = document.getElementById('materialList'); if(!box) return;
-    const kw = currentSearch.trim().toLowerCase();
-    const list = MATERIALS.filter(m=>{
-        const tags = m.tags || [];
-        if(currentFilter==='special' && !m.isSpecial && !tags.includes('special')) return false;
-        if(currentFilter==='cmr' && !tags.includes('cmr')) return false;
-        if(kw && !(m.name+(m.subtitle||'')+(m.cas||'')).toLowerCase().includes(kw)) return false;
-        return true;
-    });
-    box.innerHTML = list.map(m=>{
-        const sel = m.id === selectedMaterialId;
-        const badges = [];
-        if(m.isSpecial || (m.tags||[]).includes('special')) badges.push('<span class="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded">특별관리</span>');
-        if((m.tags||[]).includes('cmr')) badges.push('<span class="bg-orange-100 text-orange-700 text-[9px] font-bold px-1.5 py-0.5 rounded">CMR</span>');
-        return sel
-            ? `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-teal-600 text-white rounded-lg p-2.5 shadow-sm"><div class="flex items-center justify-between"><p class="text-xs font-bold">${m.name}</p><i class="fa-solid fa-check text-[10px]"></i></div><p class="text-[10px] text-teal-100 mt-0.5">${m.subtitle||m.cas||''}</p></button>`
-            : `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5"><p class="text-xs font-bold text-gray-800">${m.name}</p><p class="text-[10px] text-gray-500 mt-0.5">${m.subtitle||m.cas||''}</p>${badges.length?`<div class="flex gap-1 mt-1">${badges.join('')}</div>`:''}</button>`;
-    }).join('') || '<p class="text-[11px] text-gray-400 text-center py-6">등록된 물질이 없습니다.<br>① MSDS 등록 탭에서<br>파일을 업로드하세요.</p>';
-}
-function selectMaterial(id){ selectedMaterialId=id; renderMaterialList(); applyMaterialToForms(MATERIALS.find(m=>m.id===id)); }
-function setField(panelId,name,html){ document.querySelectorAll(`#${panelId} [data-field="${name}"]`).forEach(el=>el.innerHTML=html); }
-function setList(panelId,name,arr,bullet='· '){ setField(panelId,name,(arr&&arr.length)?arr.map(t=>`<li>${bullet}${t}</li>`).join(''):'<li class="text-gray-400">해당 없음</li>'); }
-function applyMaterialToForms(m){
-    if(!m) return;
-    setField('form-warning','product-name',m.name); setField('form-warning','pictograms',makePictogramsHTML(m.pictograms));
-    setField('form-warning','signal-word',m.signalWord); setList('form-warning','hazards',m.hazards);
-    setList('form-warning','p-prevention',m.pPrevention); setList('form-warning','p-response',m.pResponse);
-    setList('form-warning','p-storage',m.pStorage); setList('form-warning','p-disposal',m.pDisposal);
-    setField('form-warning','supplier',m.supplier);
-    setField('form-process','product-name',m.name); setField('form-process','cas-no',m.cas);
-    setField('form-process','pictograms',makePictogramsHTML(m.pictograms,'w-12 h-12 text-lg'));
-    setField('form-process','signal-word',m.signalWord);
-    setList('form-process','hazards-o',m.hazards,'ㅇ '); setList('form-process','handling',m.handling,'ㅇ ');
-    setList('form-process','ppe',m.ppe,'ㅇ '); setList('form-process','first-aid',m.firstAid,'ㅇ ');
-    setField('form-process','manufacturer',m.manufacturer);
-    setField('form-process','supplier',m.supplier);
-    applySpecialForm(m); applyEditMode();
-}
-function applySpecialForm(m){
-    const badge=document.getElementById('specialBadge'), banner=document.getElementById('notSpecialBanner'), tbody=document.getElementById('specialTableBody');
-    if(m.isSpecial && m.specialMaterials && m.specialMaterials.length>0){
-        badge.classList.remove('hidden'); banner.classList.add('hidden');
-        tbody.innerHTML = m.specialMaterials.map((sm,idx)=>{
-            const chk = v => v?`<span class="inline-flex w-6 h-6 border-2 border-gray-800 text-base font-black items-center justify-center">✓</span>`:`<span class="inline-block w-6 h-6 border-2 border-gray-800"></span>`;
-            const pc = idx===0?`<td class="border-r-2 border-gray-800 text-center font-bold py-3 px-2" rowspan="${m.specialMaterials.length}">${m.name}</td>`:'';
-            return `<tr class="border-b-2 border-gray-800">${pc}<td class="border-r-2 border-gray-800 py-3 px-2"><p>${sm.name} / ${sm.content}</p><p class="text-gray-500 text-[10px]">${sm.nameEn||''}</p></td><td class="border-r-2 border-gray-800 text-center py-3">${sm.cas}</td><td class="border-r-2 border-gray-800 text-center py-3">${chk(sm.acute)}</td><td class="border-l-2 border-r border-gray-800 text-center py-3">${chk(sm.carcino)}</td><td class="border-r border-gray-800 text-center py-3">${chk(sm.mutagen)}</td><td class="text-center py-3">${chk(sm.repro)}</td></tr>`;
-        }).join('');
-        setField('form-special','special-mat',m.specialMaterials.map(sm=>sm.name).join(', '));
-    } else {
-        badge.classList.add('hidden'); banner.classList.remove('hidden');
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-gray-400 text-xs"><i class="fa-solid fa-ban mr-1"></i>특별관리물질 아님</td></tr>`;
-        setField('form-special','special-mat','해당 없음');
+    document.getElementById('progressBar').style.width = safePct + '%';
+    document.getElementById('progressPercent').textContent = Math.round(safePct) + '%';
+    if(msg){
+        const log = document.getElementById('progressLog');
+        const p = document.createElement('p');
+        p.innerHTML = `<i class="fa-solid fa-check text-emerald-500 mr-1"></i>${msg}`;
+        log.appendChild(p);
+        log.scrollTop = log.scrollHeight;
     }
 }
-function switchForm(btn,targetId){
-    document.querySelectorAll('.form-tab-btn').forEach(b=>{b.classList.remove('bg-teal-600','text-white');b.classList.add('bg-white','text-gray-600','hover:bg-slate-50');});
-    btn.classList.remove('bg-white','text-gray-600','hover:bg-slate-50'); btn.classList.add('bg-teal-600','text-white');
-    document.querySelectorAll('.form-panel').forEach(p=>p.classList.add('hidden'));
-    document.getElementById(targetId).classList.remove('hidden');
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+let lastParsedMaterials = [];
+
+/* =========================================================
+   구성성분 수동 입력 테이블
+   ========================================================= */
+let manualCompRows = [];
+
+function addManualCompRow(name='', cas='', content=''){
+    const contentNum = parseContentNum(content);
+    manualCompRows.push({ name, cas, content, contentNum });
+    renderManualCompTable();
+    syncManualToParsed();
 }
-let editMode = false;
-function toggleEditMode(){
-    editMode=!editMode;
-    const btn=document.getElementById('editModeBtn');
-    btn.innerHTML = editMode?'<i class="fa-solid fa-pen-to-square mr-1 text-teal-600"></i>편집중':'<i class="fa-solid fa-lock mr-1"></i>잠금';
-    btn.classList.toggle('bg-teal-50',editMode); applyEditMode();
+
+function removeManualCompRow(idx){
+    manualCompRows.splice(idx, 1);
+    renderManualCompTable();
+    syncManualToParsed();
 }
-function applyEditMode(){
-    document.querySelectorAll('[data-field]').forEach(el=>{
-        const n=el.getAttribute('data-field'); if(['pictograms','signal-word-box'].includes(n)) return;
-        el.setAttribute('contenteditable',editMode?'true':'false');
-        if(editMode) el.classList.add('outline','outline-1','outline-dashed','outline-teal-300','rounded');
-        else el.classList.remove('outline','outline-1','outline-dashed','outline-teal-300','rounded');
-    });
+
+function updateManualCompRow(idx, field, value){
+    if(!manualCompRows[idx]) return;
+    manualCompRows[idx][field] = value;
+    if(field === 'content'){
+        manualCompRows[idx].contentNum = parseContentNum(value);
+    }
+    recalcManualCompSum();
+    syncManualToParsed();
 }
-function resetToAuto(){ applyMaterialToForms(MATERIALS.find(m=>m.id===selectedMaterialId)); }
-function goToLabelTab(){ document.querySelector('.tab-btn[data-tab="tab-label"]').click(); }
-function goToListTab(){ document.querySelector('.tab-btn[data-tab="tab-list"]').click(); }
+
+/* ⭐ 수동 테이블 → 자동추출 결과(parsed) 동기화 */
+function syncManualToParsed(){
+    if(!lastParsedMaterials || lastParsedMaterials.length === 0) return;
+    const m = lastParsedMaterials[0];
+    m.composition = manualCompRows.map(r=>({
+        name: r.name || '(미기입)',
+        cas: r.cas || '-',
+        content: r.content || '-',
+        contentNum: r.contentNum || 0
+    }));
+    m.compositionSum = Math.round(m.composition.reduce((s,c)=>s+(c.contentNum||0),0) * 10) / 10;
+    m.compositionValid = (m.compositionSum >= 95 && m.compositionSum <= 105);
+    m.compositionReviewed = true;
+
+    // ⭐ 자동추출 UI 도 있으면 다시 렌더 (양방향 동기화)
+    if(typeof renderCompositionReview === 'function' && document.getElementById('compositionReviewArea')){
+        const area = document.getElementById('compositionReviewArea');
+        if(!area.classList.contains('hidden')){
+            renderCompositionReview(m);
+        }
+    }
+}
+
+function parseContentNum(str){
+    if(!str) return 0;
+    const nums = String(str).match(/\d+(?:\.\d+)?/g);
+    if(!nums) return 0;
+    if(nums.length >= 2){
+        return (parseFloat(nums[0]) + parseFloat(nums[1])) / 2;
+    }
+    return parseFloat(nums[0]) || 0;
+}
+
+function recalcManualCompSum(){
+    const sum = manualCompRows.reduce((s, r) => s + (r.contentNum || 0), 0);
+    const el = document.getElementById('manualCompSum');
+    if(el){
+        const rounded = Math.round(sum * 10) / 10;
+        el.textContent = rounded;
+        el.className = (sum >= 95 && sum <= 105) ? 'text-emerald-700' : (sum > 105 ? 'text-rose-700' : 'text-amber-700');
+    }
+}
+
+function renderManualCompTable(){
+    const body = document.getElementById('manualCompBody');
+    if(!body) return;
+
+    if(manualCompRows.length === 0){
+        body.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-6 text-gray-400 text-xs bg-white border border-gray-200 border-t-0">
+                    <i class="fa-solid fa-inbox mr-1"></i>
+                    성분이 없습니다. 우측 상단의 <b>+ 성분 추가</b> 버튼을 눌러 시작하세요.
+                </td>
+            </tr>`;
+        recalcManualCompSum();
+        return;
+    }
+
+    body.innerHTML = manualCompRows.map((r, i) => `
+        <tr class="bg-white border border-gray-200 border-t-0">
+            <td class="px-2 py-1 text-center text-gray-500 font-mono">${i+1}</td>
+            <td class="px-1 py-1">
+                <input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}"
+                    placeholder="예: 황산 (Sulfuric Acid)"
+                    onchange="updateManualCompRow(${i},'name',this.value)"
+                    class="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+            </td>
+            <td class="px-1 py-1">
+                <input type="text" value="${(r.cas||'').replace(/"/g,'&quot;')}"
+                    placeholder="예: 7664-93-9"
+                    onchange="updateManualCompRow(${i},'cas',this.value)"
+                    class="w-full border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+            </td>
+            <td class="px-1 py-1">
+                <div class="flex items-center gap-1">
+                    <input type="text" value="${(r.content||'').replace(/"/g,'&quot;')}"
+                        placeholder="95~98 또는 99"
+                        onchange="updateManualCompRow(${i},'content',this.value)"
+                        class="flex-1 border border-gray-200 rounded px-2 py-1 text-xs text-center focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                    <span class="text-xs text-gray-500 font-bold">%</span>
+                </div>
+            </td>
+            <td class="px-1 py-1 text-center">
+                <button type="button" onclick="removeManualCompRow(${i})" class="text-rose-600 hover:text-rose-800" title="삭제">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    recalcManualCompSum();
+}
+
+function clearManualComp(){
+    manualCompRows = [];
+    renderManualCompTable();
+    syncManualToParsed();
+}
+
+/* =========================================================
+   MSDS 파일 처리
+   ========================================================= */
+async function handleMSDSFiles(files){
+    if(!files || files.length === 0) return;
+
+    if(typeof parseMSDSFile !== 'function'){
+        alert('⚠ MSDS 파서 스크립트가 로드되지 않았습니다.\n\n브라우저 콘솔(F12)에서 오류를 확인하거나\n페이지를 새로고침(Ctrl+F5)해주세요.');
+        return;
+    }
+
+    document.getElementById('uploadProgress').classList.remove('hidden');
+    document.getElementById('parseResult').classList.add('hidden');
+    document.getElementById('compositionReviewArea').classList.add('hidden');
+    document.getElementById('progressLog').innerHTML = '';
+    updateProgress(0);
+
+    const parsedList = [];
+    const total = files.length;
+
+    for(let i=0; i<total; i++){
+        const f = files[i];
+        const base = (i * 100) / total;
+        const step = 100 / total;
+
+        try{
+            updateProgress(base + step*0.15, `📄 [${f.name}] 수신`); await sleep(150);
+            updateProgress(base + step*0.30, `🔍 [${f.name}] PDF 텍스트 추출 중…`);
+            updateProgress(base + step*0.50, `🧠 [${f.name}] 지식베이스 매칭 중…`);
+            updateProgress(base + step*0.75, `📋 [${f.name}] 3번 구성성분 추출 중…`);
+
+            const parsed = await parseMSDSFile(f);
+            parsedList.push(parsed);
+            updateProgress(((i+1) * 100) / total,
+                `✅ [${parsed.name}] → 신뢰도: ${parsed.matchConfidence} · 성분 ${parsed.composition?.length||0}개`);
+        } catch(err){
+            console.error('[handleMSDSFiles] 파싱 실패:', f.name, err);
+            updateProgress(((i+1) * 100) / total,
+                `❌ [${f.name}] 파싱 실패: ${err.message}`);
+        }
+    }
+
+    updateProgress(100, '🎉 파싱 완료 — 구성성분을 검수한 후 등록하세요');
+    await sleep(300);
+
+    if(parsedList.length === 0){
+        alert('⚠ 파싱된 파일이 없습니다. PDF 형식과 내용을 확인해주세요.\n\n하단의 「구성성분 수동 입력」 섹션에서 직접 입력하실 수 있습니다.');
+        return;
+    }
+
+    document.getElementById('parseResult').classList.remove('hidden');
+    document.getElementById('parseResultSummary').innerHTML =
+        parsedList.map(p=>`<b>${p.name}</b>`).join(', ');
+    document.getElementById('parseDetail').innerHTML = parsedList.map(p=>`
+        <div class="border-b border-emerald-100 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
+            <p class="font-bold text-emerald-900">📦 ${p.name}</p>
+            <p class="text-gray-600 mt-1">
+                <span class="parse-highlight">CAS ${p.cas}</span>
+                <span class="parse-highlight">${p.signalWord}</span>
+                <span class="parse-highlight">픽토그램 ${p.pictograms.length}종</span>
+                ${p.isSpecial?'<span class="parse-highlight" style="background:linear-gradient(120deg,#fecaca,#f87171)">특별관리물질</span>':''}
+                <span class="parse-highlight" style="background:linear-gradient(120deg,#bfdbfe,#93c5fd)">성분 ${p.composition?.length||0}개</span>
+            </p>
+            <p class="text-gray-500 text-[10px] mt-1">📁 원본: ${p.sourceFile} · 신뢰도: <b class="${p.matched?'text-emerald-700':'text-amber-700'}">${p.matchConfidence}</b></p>
+        </div>
+    `).join('');
+
+    lastParsedMaterials = parsedList;
+    const first = parsedList[0];
+    const regProduct = document.getElementById('reg-product');
+    if(regProduct) regProduct.value = first.name;
+
+    const regMfr = document.getElementById('reg-manufacturer');
+    if(regMfr && first.manufacturer && first.manufacturer !== '(파일 참조)') regMfr.value = first.manufacturer;
+    const regSup = document.getElementById('reg-supplier');
+    if(regSup && first.supplier && first.supplier !== '(공급자 참조)') regSup.value = first.supplier;
+
+    updateAIPreview(first);
+
+    // ⭐ 파싱 결과 → 수동 입력 테이블 동기화
+    manualCompRows = (first.composition || []).map(c => ({
+        name: c.name || '',
+        cas: c.cas || '',
+        content: c.content || '',
+        contentNum: c.contentNum || 0
+    }));
+    if(manualCompRows.length === 0){
+        manualCompRows.push({ name:'', cas:'', content:'', contentNum:0 });
+    }
+    renderManualCompTable();
+
+    renderCompositionReview(first);
+}
+
+function updateAIPreview(m){
+    const box = document.getElementById('aiPreviewBody');
+    if(!box) return;
+    if(!m){
+        box.innerHTML = '<p class="text-gray-400 text-center py-8"><i class="fa-solid fa-file-arrow-up text-2xl mb-2 block"></i>파일을 업로드하면<br>여기에 결과가 표시됩니다</p>';
+        return;
+    }
+    const ghsBadges = m.pictograms.map(p=>{
+        const g = GHS_PICTOGRAMS[p];
+        return `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-semibold">${g?g.name:p}</span>`;
+    }).join(' ');
+
+    box.innerHTML = `
+        <div>
+            <p class="font-bold text-gray-600">📄 제품명 / CAS</p>
+            <p class="mt-1 bg-white border border-teal-100 rounded p-2 text-gray-800 text-[11px]">${m.name}<br><span class="font-mono text-gray-500">${m.cas}</span></p>
+        </div>
+        <div>
+            <p class="font-bold text-gray-600">⚠ 신호어 · GHS 픽토그램</p>
+            <div class="mt-1 bg-white border border-teal-100 rounded p-2">
+                <span class="inline-block bg-red-600 text-white text-xs font-black px-2 py-0.5 rounded mr-2">${m.signalWord}</span>
+                <div class="flex flex-wrap gap-1 mt-1">${ghsBadges}</div>
+            </div>
+        </div>
+        <div>
+            <p class="font-bold text-gray-600">🧬 유해위험문구 (상위 3개)</p>
+            <ul class="mt-1 bg-white border border-teal-100 rounded p-2 space-y-1 text-gray-700 text-[11px]">
+                ${m.hazards.slice(0,3).map(h=>`<li>· ${h}</li>`).join('')}
+            </ul>
+        </div>
+        <div>
+            <p class="font-bold text-gray-600">🛡️ 권장 보호구</p>
+            <p class="mt-1 bg-white border border-teal-100 rounded p-2 text-gray-700 text-[11px]">${m.ppe.join(', ')}</p>
+        </div>
+        <div>
+            <p class="font-bold text-gray-600">⚖️ 법규 자동매칭 <span class="text-[9px] text-gray-400">(등록 후 공식 API 자동검수)</span></p>
+            <ul class="mt-1 space-y-1 text-gray-700 text-[11px]">
+                ${m.isSpecial?'<li>✓ 산안법 <b>특별관리물질</b></li>':''}
+                ${m.isSpecial?'<li>✓ 작업환경측정 대상 (6개월)</li>':'<li>· 작업환경측정: 등록 후 자동검수</li>'}
+                ${m.isSpecial?'<li>✓ 특수건강진단 대상 (12개월)</li>':''}
+                <li>· 폐기물관리법: 지정폐기물</li>
+            </ul>
+        </div>
+        ${m.isSpecial?'<div class="bg-rose-100 border border-rose-300 rounded p-2 text-rose-700 font-bold text-[11px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>특별관리물질 감지됨</div>':''}
+        <div class="text-[10px] text-gray-500 pt-2 border-t border-teal-100">
+            📊 매칭 신뢰도: <b class="${m.matched?'text-emerald-700':'text-amber-700'}">${m.matchConfidence}</b>
+        </div>
+    `;
+}
+
+/* =========================================================
+   ⭐⭐⭐ 등록 처리 + 자동 검수 트리거
+   ========================================================= */
+function registerMaterial(){
+    const product = document.getElementById('reg-product').value.trim();
+    const dept = document.getElementById('reg-dept').value.trim();
+    const process = document.getElementById('reg-process').value.trim();
+    const usage = document.getElementById('reg-usage').value;
+    const manufacturer = document.getElementById('reg-manufacturer')?.value.trim() || '';
+    const supplier = document.getElementById('reg-supplier')?.value.trim() || '';
+
+    if(!product){ alert('제품명을 입력하세요. (파일을 업로드하면 자동 채워집니다)'); return; }
+    if(!dept){ alert('사용 부서를 입력하세요.'); return; }
+
+    const validManualComp = manualCompRows.filter(r =>
+        (r.name && r.name.trim()) || (r.cas && r.cas.trim()) || (r.contentNum > 0)
+    ).map(r => ({
+        name: (r.name || '').trim() || '(미기입)',
+        cas: (r.cas || '').trim() || '-',
+        content: r.content || '-',
+        contentNum: r.contentNum || 0
+    }));
+
+    const manualSum = Math.round(validManualComp.reduce((s,c)=>s+c.contentNum,0) * 10) / 10;
+
+    if(validManualComp.length > 0 && (manualSum < 90 || manualSum > 110)){
+        if(!confirm(`⚠️ 구성성분 합계가 ${manualSum}% 입니다.\n\n일반적으로 100% ±5% 여야 합니다.\n그래도 등록하시겠습니까?`)){
+            return;
+        }
+    }
+
+    let firstId = null;
+    const registeredIds = [];
+
+    if(lastParsedMaterials && lastParsedMaterials.length > 0){
+        lastParsedMaterials.forEach((m, i)=>{
+            if(i===0){
+                m.name = product;
+                if(manufacturer) m.manufacturer = manufacturer;
+                if(supplier) m.supplier = supplier;
+                if(validManualComp.length > 0){
+                    m.composition = validManualComp;
+                    m.compositionSum = manualSum;
+                    m.compositionValid = (manualSum >= 95 && manualSum <= 105);
+                    m.compositionReviewed = true;
+                    if(validManualComp[0].cas && validManualComp[0].cas !== '-'){
+                        m.cas = validManualComp[0].cas;
+                    }
+                }
+            }
+            m.deptInfo = dept;
+            m.processInfo = process;
+            m.usageInfo = usage;
+            MATERIALS.unshift(m);
+            registeredIds.push(m.id);
+            if(!firstId) firstId = m.id;
+        });
+        showToast(`✅ ${lastParsedMaterials.length}건 등록 완료 → 공식 API 자동검수 시작`);
+        lastParsedMaterials = [];
+    } else {
+        const manual = JSON.parse(JSON.stringify(FALLBACK_TEMPLATE));
+        manual.id = 'MAT_' + Date.now();
+        manual.name = product;
+        manual.subtitle = (validManualComp[0] && validManualComp[0].cas !== '-') ? validManualComp[0].cas : '수동 등록';
+        manual.deptInfo = dept;
+        manual.processInfo = process;
+        manual.usageInfo = usage;
+        if(manufacturer) manual.manufacturer = manufacturer;
+        if(supplier) manual.supplier = supplier;
+
+        if(validManualComp.length > 0){
+            manual.composition = validManualComp;
+            manual.compositionSum = manualSum;
+            manual.compositionValid = (manualSum >= 95 && manualSum <= 105);
+            manual.compositionReviewed = true;
+            if(validManualComp[0].cas && validManualComp[0].cas !== '-'){
+                manual.cas = validManualComp[0].cas;
+                manual.subtitle = validManualComp[0].cas;
+            }
+        }
+
+        manual.uploadedAt = new Date().toISOString();
+        MATERIALS.unshift(manual);
+        firstId = manual.id;
+        registeredIds.push(firstId);
+        showToast(`✅ 수동 등록 완료 (성분 ${validManualComp.length}개) → 공식 API 자동검수 시작`);
+    }
+
+    saveMATERIALS();
+
+    selectedMaterialId = firstId;
+    renderMaterialList();
+    applyMaterialToForms(MATERIALS.find(m=>m.id===firstId));
+    renderListTable();
+
+    clearRegForm();
+
+    // ⭐⭐⭐ 등록된 모든 물질에 대해 자동 검수 실행 (백그라운드)
+    if(typeof autoInspectMaterial === 'function'){
+        (async ()=>{
+            for(const id of registeredIds){
+                try{
+                    await autoInspectMaterial(id, false);
+                }catch(e){
+                    console.warn('[registerMaterial] 자동검수 실패:', id, e);
+                }
+            }
+            if(registeredIds.length > 0 && typeof showToast === 'function'){
+                showToast(`🔍 자동검수 완료 (${registeredIds.length}건)`);
+            }
+        })();
+    }
+
+    setTimeout(()=>goToListTab(), 800);
+}
+
+function clearRegForm(){
+    const ids = ['reg-product','reg-process','reg-usage','reg-dept','reg-manufacturer','reg-supplier'];
+    ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('uploadProgress').classList.add('hidden');
+    document.getElementById('parseResult').classList.add('hidden');
+    document.getElementById('compositionReviewArea').classList.add('hidden');
+    document.getElementById('compositionReviewArea').innerHTML = '';
+
+    manualCompRows = [{ name:'', cas:'', content:'', contentNum:0 }];
+    renderManualCompTable();
+
+    const regBtn = document.getElementById('btnRegister');
+    if(regBtn){
+        regBtn.disabled = false;
+        regBtn.classList.remove('opacity-50','cursor-not-allowed');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    manualCompRows = [{ name:'', cas:'', content:'', contentNum:0 }];
+    setTimeout(()=>renderManualCompTable(), 300);
+});
