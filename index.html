@@ -4,24 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>포스코퓨처엠 EHS 통합안전 플랫폼</title>
-    <!-- Tailwind CSS (디자인 라이브러리) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-    <!-- 로그인 카드 -->
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border-t-8 border-[#00529C]">
-        <!-- 헤더 영역 -->
         <div class="p-8 text-center bg-slate-50 border-b border-gray-100">
             <div class="inline-block p-3 rounded-full bg-blue-50 text-[#00529C] mb-3">
-                <i class="fa-solid font-bold fa-[#00529C] fa-shield-halved text-4xl"></i>
+                <i class="fa-solid font-bold fa-shield-halved text-4xl"></i>
             </div>
             <h1 class="text-2xl font-black text-[#00529C] tracking-wide">POSCO FUTURE M</h1>
             <p class="text-sm font-semibold text-gray-600 mt-1">EHS 스마트 통합안전 플랫폼</p>
         </div>
 
-        <!-- 폼 영역 -->
         <form id="loginForm" onsubmit="handleLogin(event)" class="p-8 space-y-5">
             <div>
                 <label class="block text-xs font-bold text-gray-600 uppercase mb-2">사원번호</label>
@@ -38,11 +34,17 @@
                 <label class="block text-xs font-bold text-gray-600 uppercase mb-2">비밀번호</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                        <i class="fa-solid fa-[#00529C] fa-lock"></i>
+                        <i class="fa-solid fa-lock"></i>
                     </span>
                     <input type="password" id="password" required placeholder="비밀번호를 입력하세요" 
                         class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:border-[#00529C] focus:ring-1 focus:ring-[#00529C] transition text-sm">
                 </div>
+            </div>
+
+            <!-- 에러 메시지 -->
+            <div id="loginError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 text-xs px-3 py-2 rounded">
+                <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                <span id="loginErrorText">사원번호 또는 비밀번호를 확인하세요</span>
             </div>
 
             <button type="submit" 
@@ -51,20 +53,49 @@
             </button>
         </form>
 
-        <!-- 푸터 -->
         <div class="px-8 py-4 bg-gray-50 text-center text-xs text-gray-400 border-t border-gray-100">
             포스코퓨처엠 안전보건경영시스템 ⓒ All Rights Reserved.
         </div>
     </div>
 
     <script>
+        // 관리자 계정 (실제 운영시엔 서버 인증으로 대체)
+        const ADMIN_ACCOUNTS = {
+            '2': '2'  // 사번:비밀번호
+        };
+
         function handleLogin(event) {
             event.preventDefault();
-            const empId = document.getElementById('empId').value;
-            if(empId) {
-                // 로그인 성공 시 대시보드(dashboard.html)로 이동
-                window.location.href = 'dashboard.html';
+            const empId = document.getElementById('empId').value.trim();
+            const pw = document.getElementById('password').value.trim();
+            const errBox = document.getElementById('loginError');
+            const errTxt = document.getElementById('loginErrorText');
+
+            if(!empId || !pw){
+                errTxt.textContent = '사원번호와 비밀번호를 모두 입력하세요';
+                errBox.classList.remove('hidden');
+                return;
             }
+
+            // 관리자 로그인 판별
+            let role = 'user';
+            let userName = '홍길동 안전관리자';
+            let userDept = '광양 양극재 생산기술그룹';
+
+            if(ADMIN_ACCOUNTS[empId] && ADMIN_ACCOUNTS[empId] === pw){
+                role = 'admin';
+                userName = '시스템 관리자';
+                userDept = 'EHS 통합관리팀';
+            }
+
+            // 세션 저장 (sessionStorage: 브라우저 닫으면 초기화)
+            sessionStorage.setItem('pfm_role', role);
+            sessionStorage.setItem('pfm_empId', empId);
+            sessionStorage.setItem('pfm_userName', userName);
+            sessionStorage.setItem('pfm_userDept', userDept);
+            sessionStorage.setItem('pfm_loginAt', new Date().toISOString());
+
+            window.location.href = 'dashboard.html';
         }
     </script>
 </body>
