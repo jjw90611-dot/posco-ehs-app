@@ -38,14 +38,8 @@ const GHS_PICTOGRAMS = {
     GHS08:{icon:'fa-person-dots-from-line',name:'건강유해성'}, GHS09:{icon:'fa-fish',name:'수생환경유해성'}
 };
 
-let MATERIALS = JSON.parse(localStorage.getItem('pfm_materials') || 'null');
-if(!MATERIALS || MATERIALS.length === 0){
-    MATERIALS = [
-        {id:'MC-12RHR',name:'MC-12RHR',subtitle:'1309-48-4 외 4종',manufacturer:'포스코퓨처엠 (054-290-0114)',supplier:'포스코퓨처엠',cas:'1309-48-4',signalWord:'위험',pictograms:['GHS08','GHS06','GHS09'],tags:[],hazards:['눈에 심한 자극','흡입 시 치명적','장기 손상 우려','수생생물에 유독'],pPrevention:['안전조치 이해 후 취급','흄·미스트 흡입 회피','취급 후 세척'],pResponse:['보호구 착용','피부 노출 시 세척','의학조치'],pStorage:['잠금 저장'],pDisposal:['법규에 따라 폐기'],handling:['직접 접촉 회피','통풍 장소'],ppe:['방독마스크','보안경','안전장갑','보호복'],firstAid:['눈: 15분 세척','피부: 세척','흡입: 신선한 공기','섭취: 의사진찰'],isSpecial:true,specialMaterials:[{name:'결정질 실리카',nameEn:'Crystalline Silica',content:'15%',cas:'14808-60-7',acute:false,carcino:true,mutagen:false,repro:false}],deptInfo:'광양 양극재 1공장 - 소성공정',processInfo:'소성',uploadedAt:new Date().toISOString()},
-        {id:'NMP',name:'N-Methyl-2-pyrrolidone (NMP)',subtitle:'872-50-4',manufacturer:'(주)엘지화학',supplier:'(주)엘지화학',cas:'872-50-4',signalWord:'위험',pictograms:['GHS08','GHS07'],tags:['special'],hazards:['태아 손상 가능 (생식독성 1B)','눈 심한 자극','피부 자극','호흡기 자극'],pPrevention:['임신 중 취급 금지','증기 흡입 회피','보호구 착용'],pResponse:['피부: 세척','눈: 15분 세척 후 진찰'],pStorage:['밀폐 보관'],pDisposal:['법규 폐기'],handling:['가임여성 제한','국소배기','피부접촉 회피'],ppe:['방독마스크','보안경','내화학장갑','보호복'],firstAid:['눈: 15분 세척','피부: 세척','흡입: 신선공기','섭취: 진찰'],isSpecial:true,specialMaterials:[{name:'NMP',nameEn:'NMP',content:'99%',cas:'872-50-4',acute:false,carcino:false,mutagen:false,repro:true}],deptInfo:'광양 양극재 1공장 - 소성공정',processInfo:'슬러리 믹싱',uploadedAt:new Date().toISOString()}
-    ];
-    saveMATERIALS();
-}
+// ⭐ 샘플 데이터 제거 - 빈 배열로 시작 (모든 회사에서 사용 가능)
+let MATERIALS = JSON.parse(localStorage.getItem('pfm_materials') || '[]');
 function saveMATERIALS(){ localStorage.setItem('pfm_materials', JSON.stringify(MATERIALS)); }
 
 function makePictogramsHTML(codes, size='w-16 h-16 text-2xl'){
@@ -76,7 +70,7 @@ function renderMaterialList(){
         return sel
             ? `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-teal-600 text-white rounded-lg p-2.5 shadow-sm"><div class="flex items-center justify-between"><p class="text-xs font-bold">${m.name}</p><i class="fa-solid fa-check text-[10px]"></i></div><p class="text-[10px] text-teal-100 mt-0.5">${m.subtitle||m.cas||''}</p></button>`
             : `<button onclick="selectMaterial('${m.id}')" class="w-full text-left bg-white border border-gray-200 hover:border-teal-400 rounded-lg p-2.5"><p class="text-xs font-bold text-gray-800">${m.name}</p><p class="text-[10px] text-gray-500 mt-0.5">${m.subtitle||m.cas||''}</p>${badges.length?`<div class="flex gap-1 mt-1">${badges.join('')}</div>`:''}</button>`;
-    }).join('') || '<p class="text-[11px] text-gray-400 text-center py-6">검색 결과 없음</p>';
+    }).join('') || '<p class="text-[11px] text-gray-400 text-center py-6">등록된 물질이 없습니다.<br>① MSDS 등록 탭에서<br>파일을 업로드하세요.</p>';
 }
 function selectMaterial(id){ selectedMaterialId=id; renderMaterialList(); applyMaterialToForms(MATERIALS.find(m=>m.id===id)); }
 function setField(panelId,name,html){ document.querySelectorAll(`#${panelId} [data-field="${name}"]`).forEach(el=>el.innerHTML=html); }
@@ -94,6 +88,7 @@ function applyMaterialToForms(m){
     setList('form-process','hazards-o',m.hazards,'ㅇ '); setList('form-process','handling',m.handling,'ㅇ ');
     setList('form-process','ppe',m.ppe,'ㅇ '); setList('form-process','first-aid',m.firstAid,'ㅇ ');
     setField('form-process','manufacturer',m.manufacturer);
+    setField('form-process','supplier',m.supplier);
     applySpecialForm(m); applyEditMode();
 }
 function applySpecialForm(m){
