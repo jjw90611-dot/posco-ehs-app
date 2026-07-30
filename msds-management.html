@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>포스코퓨처엠 - MSDS 보건관리</title>
+    <title>EHS Portal - MSDS 보건관리</title>
     <!-- Tailwind CSS & FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,13 +26,13 @@
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center space-x-3 cursor-pointer" onclick="location.href='dashboard.html'">
                     <i class="fa-solid fa-shield-halved text-2xl text-blue-300"></i>
-                    <span class="font-black text-xl tracking-wider">POSCO <span class="font-light">FUTURE M</span></span>
-                    <span class="bg-blue-800 text-xs px-2.5 py-1 rounded-full font-medium">EHS Portal</span>
+                    <span class="font-black text-xl tracking-wider">EHS <span class="font-light">Portal</span></span>
+                    <span class="bg-blue-800 text-xs px-2.5 py-1 rounded-full font-medium">MSDS Management</span>
                 </div>
                 <div class="flex items-center space-x-4">
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-bold">홍길동 안전관리자</p>
-                        <p class="text-xs text-blue-200">광양 양극재 생산기술그룹</p>
+                        <p class="text-xs text-blue-200">EHS 담당</p>
                     </div>
                     <a href="index.html" class="bg-blue-800 hover:bg-blue-900 text-xs font-semibold px-3 py-2 rounded-lg border border-blue-600 transition flex items-center space-x-1">
                         <i class="fa-solid fa-right-from-bracket"></i>
@@ -123,12 +123,10 @@
                     <button data-tab="tab-env" class="tab-btn whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-teal-600 transition flex items-center space-x-2">
                         <i class="fa-solid fa-wind"></i>
                         <span>④ 작업환경측정</span>
-                        <span class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">8</span>
                     </button>
                     <button data-tab="tab-health" class="tab-btn whitespace-nowrap px-4 py-3 text-sm font-bold border-b-2 border-transparent text-gray-500 hover:text-teal-600 transition flex items-center space-x-2">
                         <i class="fa-solid fa-user-doctor"></i>
                         <span>⑤ 특수건강진단</span>
-                        <span class="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">15</span>
                     </button>
                 </nav>
             </div>
@@ -185,20 +183,11 @@
                                     </div>
                                     <div>
                                         <label class="text-xs font-semibold text-gray-600">사용 부서 <span class="text-rose-500">*</span></label>
-                                        <select id="reg-dept" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-                                            <option value="">선택하세요</option>
-                                            <option>광양 양극재 1공장 - 소성공정</option>
-                                            <option>광양 양극재 1공장 - 세척공정</option>
-                                            <option>광양 양극재 2공장 - 소성공정</option>
-                                            <option>광양 음극재 - 코팅공정</option>
-                                            <option>세종 전구체 - 반응공정</option>
-                                            <option>포항 품질보증부 - 분석실</option>
-                                            <option>포항 설비기술부 - 정비</option>
-                                        </select>
+                                        <input type="text" id="reg-dept" placeholder="예: 생산1팀, 품질관리부, 연구소" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
                                     </div>
                                     <div>
                                         <label class="text-xs font-semibold text-gray-600">사용 공정</label>
-                                        <input type="text" id="reg-process" placeholder="예: 슬러리 믹싱, 설비 윤활" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                                        <input type="text" id="reg-process" placeholder="예: 세척, 정비, 분석" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
                                     </div>
                                     <div>
                                         <label class="text-xs font-semibold text-gray-600">월 사용량(kg)</label>
@@ -228,7 +217,7 @@
                     </div>
                 </div>
 
-                <!-- ② MSDS 리스트 (원본 그대로) -->
+                <!-- ② MSDS 리스트 -->
                 <div id="tab-list" class="tab-panel">
                     <div class="bg-gradient-to-r from-indigo-50 via-blue-50 to-teal-50 border border-indigo-200 rounded-xl p-4 mb-5">
                         <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
@@ -277,11 +266,11 @@
 
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                         <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                            <div><label class="text-[11px] font-bold text-gray-600">사용 부서</label><select id="f2-dept" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option>광양 양극재 1공장</option><option>광양 양극재 2공장</option><option>광양 음극재</option><option>세종 전구체</option><option>포항 품질보증부</option><option>포항 설비기술부</option></select></div>
-                            <div><label class="text-[11px] font-bold text-gray-600">사용 공정</label><select id="f2-process" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option>소성공정</option><option>세척공정</option><option>코팅공정</option><option>믹싱공정</option><option>반응공정</option></select></div>
+                            <div><label class="text-[11px] font-bold text-gray-600">사용 부서</label><input type="text" id="f2-dept" placeholder="부서명 입력 (부분검색)" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
+                            <div><label class="text-[11px] font-bold text-gray-600">사용 공정</label><input type="text" id="f2-process" placeholder="공정명 입력 (부분검색)" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
                             <div><label class="text-[11px] font-bold text-gray-600">유해성 분류</label><select id="f2-hazard" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option value="special">특별관리물질</option><option value="cmr">CMR 물질</option><option value="carcino">발암성</option><option value="repro">생식독성</option><option value="flam">인화성</option></select></div>
                             <div><label class="text-[11px] font-bold text-gray-600">법규 구분</label><select id="f2-law" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option>산업안전보건법</option><option>화학물질관리법</option><option>위험물안전관리법</option><option>화학물질등록평가법</option></select></div>
-                            <div><label class="text-[11px] font-bold text-gray-600">검색 (물질명·CAS·부서)</label><div class="relative mt-1"><input type="text" id="f2-search" placeholder="예: NMP, 872-50-4, 광양" class="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-gray-400 text-[10px]"></i></div></div>
+                            <div><label class="text-[11px] font-bold text-gray-600">검색 (물질명·CAS·부서)</label><div class="relative mt-1"><input type="text" id="f2-search" placeholder="예: NMP, 872-50-4" class="w-full border border-gray-300 rounded-lg pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-gray-400 text-[10px]"></i></div></div>
                         </div>
                         <div class="flex justify-end mt-3 gap-2 flex-wrap">
                             <button onclick="resetFilter2()" class="text-xs font-semibold text-gray-600 border border-gray-300 hover:bg-slate-100 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-rotate-left mr-1"></i>초기화</button>
@@ -329,7 +318,7 @@
                     </div>
                 </div>
 
-                <!-- ③ 경고표지·관리요령 (원본 그대로) -->
+                <!-- ③ 경고표지·관리요령 -->
                 <div id="tab-label" class="tab-panel">
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
                         <div class="lg:col-span-3">
@@ -392,7 +381,7 @@
                             </div>
                             <div id="form-process" class="form-panel hidden">
                                 <div class="bg-white border-2 border-gray-800 shadow-md">
-                                    <div class="grid grid-cols-[140px_1fr] border-b-2 border-gray-800"><div class="bg-slate-100 border-r-2 border-gray-800 flex items-center justify-center py-3"><div class="text-center"><div class="text-[10px] text-gray-500 font-bold mb-0.5">[자사 CI 고정]</div><div class="text-sm font-black text-gray-800">POSCO<br>FUTURE M</div></div></div><div class="flex items-center justify-center py-3"><h2 class="text-xl font-black tracking-widest text-gray-900">작업공정별 관리 요령</h2></div></div>
+                                    <div class="grid grid-cols-[140px_1fr] border-b-2 border-gray-800"><div class="bg-slate-100 border-r-2 border-gray-800 flex items-center justify-center py-3"><div class="text-center"><div class="text-[10px] text-gray-500 font-bold mb-0.5">[자사 CI 영역]</div><div class="text-sm font-black text-gray-800">COMPANY<br>LOGO</div></div></div><div class="flex items-center justify-center py-3"><h2 class="text-xl font-black tracking-widest text-gray-900">작업공정별 관리 요령</h2></div></div>
                                     <table class="w-full text-xs"><tbody class="divide-y-2 divide-gray-800">
                                         <tr><td class="bg-slate-100 border-r-2 border-gray-800 font-black text-gray-800 px-2 py-2 w-32 text-center">물질명<br>제품명</td><td class="px-3 py-2 font-bold" data-field="product-name">-</td></tr>
                                         <tr><td class="bg-slate-100 border-r-2 border-gray-800 font-black text-gray-800 px-2 py-2 text-center">CAS No.</td><td class="px-3 py-2" data-field="cas-no">-</td></tr>
@@ -405,13 +394,13 @@
                                     <div class="border-t-2 border-gray-800 p-3 space-y-1 text-[11px] text-gray-800 bg-slate-50">
                                         <p>※ 자세한 내용은 해당 MSDS 및 작업표준을 참조하시기 바랍니다.</p>
                                         <p>※ 제조사 : <span class="bg-yellow-100 px-1 rounded" data-field="manufacturer">-</span></p>
-                                        <p>※ 공급자 : <span class="bg-yellow-100 px-1 rounded" data-field="supplier">포스코퓨처엠 (054-290-0114, 경북 포항시 신항로 110)</span></p>
+                                        <p>※ 공급자 : <span class="bg-yellow-100 px-1 rounded" data-field="supplier">-</span></p>
                                     </div>
                                 </div>
                             </div>
                             <div id="form-special" class="form-panel hidden">
                                 <div class="bg-white border-2 border-gray-800 shadow-md">
-                                    <div class="bg-gray-800 text-white text-center py-2"><h2 class="text-lg font-black tracking-widest">특별관리물질의 고지</h2><p class="text-[10px] text-gray-300 mt-0.5">[관련근거: (PCI-00-0GN-401) 관리대상유해물질 취급 및 관리지침]</p></div>
+                                    <div class="bg-gray-800 text-white text-center py-2"><h2 class="text-lg font-black tracking-widest">특별관리물질의 고지</h2><p class="text-[10px] text-gray-300 mt-0.5">[관련근거: 관리대상유해물질 취급 및 관리지침]</p></div>
                                     <table class="w-full text-xs border-collapse">
                                         <thead>
                                             <tr class="bg-slate-100 border-b-2 border-gray-800"><th class="border-r-2 border-gray-800 font-black text-gray-800 py-2 px-2" rowspan="2">MSDS<br>(제품)명</th><th class="border-r-2 border-gray-800 font-black text-gray-800 py-2 px-2" rowspan="2">특별관리물질명<br>/ 함유량(%)</th><th class="border-r-2 border-gray-800 font-black text-gray-800 py-2 px-2" rowspan="2">CAS No.</th><th class="border-r-2 border-gray-800 font-black text-gray-800 py-2 px-2" rowspan="2">급성<br>독성<br>물질</th><th class="font-black text-gray-800 py-2 px-2" colspan="3">건강유해성</th></tr>
@@ -434,7 +423,7 @@
                     </div>
                 </div>
 
-                <!-- ④ 작업환경측정 (원본 그대로) -->
+                <!-- ④ 작업환경측정 -->
                 <div id="tab-env" class="tab-panel">
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
                         <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center"><p class="text-[11px] font-bold text-gray-500">측정대상 물질</p><p class="text-xl font-black text-gray-800 mt-1" id="k4-total">0<span class="text-xs text-gray-500"> 종</span></p></div>
@@ -446,8 +435,8 @@
 
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                         <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                            <div><label class="text-[11px] font-bold text-gray-600">사업장</label><select id="f4-site" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option>포항</option><option>광양</option><option>세종</option><option>기타</option></select></div>
-                            <div><label class="text-[11px] font-bold text-gray-600">부서명 (자유입력)</label><input type="text" id="f4-dept" list="deptList" placeholder="부서명 검색" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><datalist id="deptList"><option value="양극재제조부"><option value="음극재제조부"><option value="전구체제조부"><option value="품질보증부"><option value="설비기술부"><option value="안전환경부"></datalist></div>
+                            <div><label class="text-[11px] font-bold text-gray-600">사업장</label><input type="text" id="f4-site" placeholder="사업장명 입력" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
+                            <div><label class="text-[11px] font-bold text-gray-600">부서명</label><input type="text" id="f4-dept" placeholder="부서명 검색" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
                             <div><label class="text-[11px] font-bold text-gray-600">상태</label><select id="f4-status" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option value="ok">적합</option><option value="soon">만료임박</option><option value="bad">부적합</option></select></div>
                             <div class="md:col-span-2"><label class="text-[11px] font-bold text-gray-600">물질명·CAS 검색</label><input type="text" id="f4-search" placeholder="예: NMP, 872-50-4" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
                         </div>
@@ -462,7 +451,7 @@
                     <p id="matEmpty" class="hidden text-center py-12 text-gray-400 text-sm"><i class="fa-solid fa-inbox text-3xl mb-2 block"></i>등록된 물질이 없습니다. 우측 상단의 <b>물질 등록</b> 버튼을 눌러 시작하세요.</p>
                 </div>
 
-                <!-- ⑤ 특수건강진단 (원본 그대로) -->
+                <!-- ⑤ 특수건강진단 -->
                 <div id="tab-health" class="tab-panel">
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
                         <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center"><p class="text-[11px] font-bold text-gray-500">총 인원</p><p class="text-xl font-black text-gray-800 mt-1" id="k5-total">0<span class="text-xs text-gray-500"> 명</span></p></div>
@@ -474,7 +463,7 @@
 
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <div><label class="text-[11px] font-bold text-gray-600">부서명 (자유입력)</label><input type="text" id="f5-dept" list="deptList" placeholder="부서명 검색" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
+                            <div><label class="text-[11px] font-bold text-gray-600">부서명</label><input type="text" id="f5-dept" placeholder="부서명 검색" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
                             <div><label class="text-[11px] font-bold text-gray-600">성명</label><input type="text" id="f5-name" placeholder="성명 검색" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"></div>
                             <div><label class="text-[11px] font-bold text-gray-600">검토결과</label><select id="f5-result" class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-teal-500"><option value="">전체</option><option value="적격">적격</option><option value="부적격">부적격</option></select></div>
                             <div class="flex items-end"><button onclick="renderHealth()" class="w-full bg-white border border-gray-300 hover:bg-slate-50 text-xs font-semibold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-filter mr-1"></i>필터 적용</button></div>
@@ -523,7 +512,7 @@
         </div>
     </main>
 
-    <!-- 모달·패널 (원본 그대로) -->
+    <!-- 모달·패널 -->
     <div id="detailPanel" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/40" onclick="closeDetailPanel()"></div>
         <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto">
@@ -564,9 +553,9 @@
             <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label class="text-xs font-bold text-gray-600">물질명 *</label><input id="m-name" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: N-Methyl-2-pyrrolidone"></div>
                 <div><label class="text-xs font-bold text-gray-600">CAS No.</label><input id="m-cas" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: 872-50-4"></div>
-                <div><label class="text-xs font-bold text-gray-600">사업장 *</label><select id="m-site" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"><option>포항</option><option>광양</option><option>세종</option><option>기타</option></select></div>
-                <div><label class="text-xs font-bold text-gray-600">부서명 (자유입력)</label><input id="m-dept" type="text" list="deptList" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: 양극재제조부"></div>
-                <div><label class="text-xs font-bold text-gray-600">측정지점</label><input id="m-loc" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: 코팅라인 A"></div>
+                <div><label class="text-xs font-bold text-gray-600">사업장 *</label><input id="m-site" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: 본사, 제1공장"></div>
+                <div><label class="text-xs font-bold text-gray-600">부서명</label><input id="m-dept" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: 생산1팀"></div>
+                <div><label class="text-xs font-bold text-gray-600">측정지점</label><input id="m-loc" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: A라인"></div>
                 <div><label class="text-xs font-bold text-gray-600">측정주기 (개월)</label><input id="m-cycle" type="number" value="6" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
                 <div><label class="text-xs font-bold text-gray-600">노출기준 (TWA)</label><input id="m-twa" type="text" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="예: 10 ppm"></div>
                 <div><label class="text-xs font-bold text-gray-600">최근 측정일</label><input id="m-date" type="date" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
