@@ -21,6 +21,109 @@ function updateProgress(pct,msg){
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 let lastParsedMaterials = [];
 
+/* =========================================================
+   ⭐⭐⭐ 구성성분 수동 입력 (신규)
+   ========================================================= */
+let manualCompRows = [];  // {name, cas, content, contentNum}
+
+function addManualCompRow(name='', cas='', content=''){
+    const contentNum = parseContentNum(content);
+    manualCompRows.push({ name, cas, content, contentNum });
+    renderManualCompTable();
+}
+
+function removeManualCompRow(idx){
+    manualCompRows.splice(idx, 1);
+    renderManualCompTable();
+}
+
+function updateManualCompRow(idx, field, value){
+    if(!manualCompRows[idx]) return;
+    manualCompRows[idx][field] = value;
+    if(field === 'content'){
+        manualCompRows[idx].contentNum = parseContentNum(value);
+    }
+    recalcManualCompSum();
+}
+
+function parseContentNum(str){
+    if(!str) return 0;
+    const nums = String(str).match(/\d+(?:\.\d+)?/g);
+    if(!nums) return 0;
+    if(nums.length >= 2){
+        return (parseFloat(nums[0]) + parseFloat(nums[1])) / 2;
+    }
+    return parseFloat(nums[0]) || 0;
+}
+
+function recalcManualCompSum(){
+    const sum = manualCompRows.reduce((s, r) => s + (r.contentNum || 0), 0);
+    const el = document.getElementById('manualCompSum');
+    if(el){
+        const rounded = Math.round(sum * 10) / 10;
+        el.textContent = rounded;
+        el.className = (sum >= 95 && sum <= 105) ? 'text-emerald-700' : (sum > 105 ? 'text-rose-700' : 'text-amber-700');
+    }
+}
+
+function renderManualCompTable(){
+    const body = document.getElementById('manualCompBody');
+    if(!body) return;
+
+    if(manualCompRows.length === 0){
+        body.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-6 text-gray-400 text-xs bg-white border border-gray-200 border-t-0">
+                    <i class="fa-solid fa-inbox mr-1"></i>
+                    성분이 없습니다. 우측 상단의 <b>+ 성분 추가</b> 버튼을 눌러 시작하세요.
+                </td>
+            </tr>`;
+        recalcManualCompSum();
+        return;
+    }
+
+    body.innerHTML = manualCompRows.map((r, i) => `
+        <tr class="bg-white border border-gray-200 border-t-0">
+            <td class="px-2 py-1 text-center text-gray-500 font-mono">${i+1}</td>
+            <td class="px-1 py-1">
+                <input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}"
+                    placeholder="예: 황산 (Sulfuric Acid)"
+                    onchange="updateManualCompRow(${i},'name',this.value)"
+                    class="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+            </td>
+            <td class="px-1 py-1">
+                <input type="text" value="${(r.cas||'').replace(/"/g,'&quot;')}"
+                    placeholder="예: 7664-93-9"
+                    onchange="updateManualCompRow(${i},'cas',this.value)"
+                    class="w-full border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+            </td>
+            <td class="px-1 py-1">
+                <div class="flex items-center gap-1">
+                    <input type="text" value="${(r.content||'').replace(/"/g,'&quot;')}"
+                        placeholder="95~98 또는 99"
+                        onchange="updateManualCompRow(${i},'content',this.value)"
+                        class="flex-1 border border-gray-200 rounded px-2 py-1 text-xs text-center focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                    <span class="text-xs text-gray-500 font-bold">%</span>
+                </div>
+            </td>
+            <td class="px-1 py-1 text-center">
+                <button type="button" onclick="removeManualCompRow(${i})" class="text-rose-600 hover:text-rose-800" title="삭제">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    recalcManualCompSum();
+}
+
+function clearManualComp(){
+    manualCompRows = [];
+    renderManualCompTable();
+}
+
+/* =========================================================
+   MSDS 파일 처리
+   ========================================================= */
 async function handleMSDSFiles(files){
     if(!files || files.length === 0) return;
 
@@ -41,7 +144,7 @@ async function handleMSDSFiles(files){
 
     for(let i=0; i<total; i++){
         const f = files[i];
-        const base = (i * 100) / total;   // ⭐ total이 0이면 위에서 return되므로 안전
+        const base = (i * 100) / total;
         const step = 100 / total;
 
         try{
@@ -65,7 +168,7 @@ async function handleMSDSFiles(files){
     await sleep(300);
 
     if(parsedList.length === 0){
-        alert('⚠ 파싱된 파일이 없습니다. PDF 형식과 내용을 확인해주세요.');
+        alert('⚠ 파싱된 파일이 없습니다. PDF 형식과 내용을 확인해주세요.\n\n하단의 「구성성분 수동 입력」 섹션에서 직접 입력하실 수 있습니다.');
         return;
     }
 
@@ -90,7 +193,27 @@ async function handleMSDSFiles(files){
     const first = parsedList[0];
     const regProduct = document.getElementById('reg-product');
     if(regProduct) regProduct.value = first.name;
+
+    // ⭐ 파싱된 제조사/공급자도 기본정보에 자동 채우기
+    const regMfr = document.getElementById('reg-manufacturer');
+    if(regMfr && first.manufacturer && first.manufacturer !== '(파일 참조)') regMfr.value = first.manufacturer;
+    const regSup = document.getElementById('reg-supplier');
+    if(regSup && first.supplier && first.supplier !== '(공급자 참조)') regSup.value = first.supplier;
+
     updateAIPreview(first);
+
+    // ⭐ 파싱된 성분을 수동 입력 테이블에도 동기화 (사용자가 이어서 편집 가능)
+    manualCompRows = (first.composition || []).map(c => ({
+        name: c.name || '',
+        cas: c.cas || '',
+        content: c.content || '',
+        contentNum: c.contentNum || 0
+    }));
+    // 파싱 실패 시 빈 행 1개 자동 생성
+    if(manualCompRows.length === 0){
+        manualCompRows.push({ name:'', cas:'', content:'', contentNum:0 });
+    }
+    renderManualCompTable();
 
     renderCompositionReview(first);
 }
@@ -145,33 +268,60 @@ function updateAIPreview(m){
     `;
 }
 
+/* =========================================================
+   ⭐⭐⭐ 등록 처리 (수동 입력 병합)
+   ========================================================= */
 function registerMaterial(){
-    if(lastParsedMaterials && lastParsedMaterials.length > 0){
-        const m = lastParsedMaterials[0];
-        if(m.composition && m.composition.length > 0 && !m.compositionReviewed){
-            alert('⚠️ MSDS 3번 「구성성분의 명칭 및 함유량」을 검수 완료해주세요.\n\n체크박스에 체크한 후 등록할 수 있습니다.');
-            return;
-        }
-        if(m.composition && m.composition.length > 0 && (m.compositionSum < 90 || m.compositionSum > 110)){
-            if(!confirm(`⚠️ 성분 합계가 ${m.compositionSum}% 입니다.\n\n일반적으로 100% ±5% 여야 합니다.\n그래도 등록하시겠습니까?`)){
-                return;
-            }
-        }
-    }
-
     const product = document.getElementById('reg-product').value.trim();
-    const dept = document.getElementById('reg-dept').value;
+    const dept = document.getElementById('reg-dept').value.trim();
     const process = document.getElementById('reg-process').value.trim();
     const usage = document.getElementById('reg-usage').value;
+    const manufacturer = document.getElementById('reg-manufacturer')?.value.trim() || '';
+    const supplier = document.getElementById('reg-supplier')?.value.trim() || '';
 
     if(!product){ alert('제품명을 입력하세요. (파일을 업로드하면 자동 채워집니다)'); return; }
-    if(!dept){ alert('사용 부서를 선택하세요.'); return; }
+    if(!dept){ alert('사용 부서를 입력하세요.'); return; }
+
+    // ⭐ 수동 입력된 성분 중 유효한 것만 필터
+    const validManualComp = manualCompRows.filter(r =>
+        (r.name && r.name.trim()) || (r.cas && r.cas.trim()) || (r.contentNum > 0)
+    ).map(r => ({
+        name: (r.name || '').trim() || '(미기입)',
+        cas: (r.cas || '').trim() || '-',
+        content: r.content || '-',
+        contentNum: r.contentNum || 0
+    }));
+
+    const manualSum = Math.round(validManualComp.reduce((s,c)=>s+c.contentNum,0) * 10) / 10;
+
+    // ⭐ 성분이 하나라도 있으면 합계 검증
+    if(validManualComp.length > 0 && (manualSum < 90 || manualSum > 110)){
+        if(!confirm(`⚠️ 구성성분 합계가 ${manualSum}% 입니다.\n\n일반적으로 100% ±5% 여야 합니다.\n그래도 등록하시겠습니까?`)){
+            return;
+        }
+    }
 
     let firstId = null;
 
     if(lastParsedMaterials && lastParsedMaterials.length > 0){
+        // ⭐ 파일 업로드 케이스: 파싱 결과 + 수동 편집 병합
         lastParsedMaterials.forEach((m, i)=>{
-            if(i===0) m.name = product;
+            if(i===0){
+                m.name = product;
+                if(manufacturer) m.manufacturer = manufacturer;
+                if(supplier) m.supplier = supplier;
+                // ⭐ 수동 입력 성분이 있으면 그것으로 대체 (사용자 편집 우선)
+                if(validManualComp.length > 0){
+                    m.composition = validManualComp;
+                    m.compositionSum = manualSum;
+                    m.compositionValid = (manualSum >= 95 && manualSum <= 105);
+                    m.compositionReviewed = true;
+                    // 첫 성분의 CAS를 대표 CAS로
+                    if(validManualComp[0].cas && validManualComp[0].cas !== '-'){
+                        m.cas = validManualComp[0].cas;
+                    }
+                }
+            }
             m.deptInfo = dept;
             m.processInfo = process;
             m.usageInfo = usage;
@@ -181,17 +331,33 @@ function registerMaterial(){
         showToast(`✅ ${lastParsedMaterials.length}건 등록 완료 → ② MSDS 리스트로 이동합니다`);
         lastParsedMaterials = [];
     } else {
+        // ⭐ 파일 없이 완전 수동 등록
         const manual = JSON.parse(JSON.stringify(FALLBACK_TEMPLATE));
-        manual.id = 'MAT_'+Date.now();
+        manual.id = 'MAT_' + Date.now();
         manual.name = product;
-        manual.subtitle = '수동 등록';
+        manual.subtitle = (validManualComp[0] && validManualComp[0].cas !== '-') ? validManualComp[0].cas : '수동 등록';
         manual.deptInfo = dept;
         manual.processInfo = process;
         manual.usageInfo = usage;
+        if(manufacturer) manual.manufacturer = manufacturer;
+        if(supplier) manual.supplier = supplier;
+
+        if(validManualComp.length > 0){
+            manual.composition = validManualComp;
+            manual.compositionSum = manualSum;
+            manual.compositionValid = (manualSum >= 95 && manualSum <= 105);
+            manual.compositionReviewed = true;
+            // 대표 CAS
+            if(validManualComp[0].cas && validManualComp[0].cas !== '-'){
+                manual.cas = validManualComp[0].cas;
+                manual.subtitle = validManualComp[0].cas;
+            }
+        }
+
         manual.uploadedAt = new Date().toISOString();
         MATERIALS.unshift(manual);
         firstId = manual.id;
-        showToast('✅ 수동 등록 완료 → ② MSDS 리스트로 이동합니다');
+        showToast(`✅ 수동 등록 완료 (성분 ${validManualComp.length}개) → ② MSDS 리스트로 이동합니다`);
     }
 
     saveMATERIALS();
@@ -207,15 +373,26 @@ function registerMaterial(){
 }
 
 function clearRegForm(){
-    const ids = ['reg-product','reg-process','reg-usage','reg-dept'];
+    const ids = ['reg-product','reg-process','reg-usage','reg-dept','reg-manufacturer','reg-supplier'];
     ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('uploadProgress').classList.add('hidden');
     document.getElementById('parseResult').classList.add('hidden');
     document.getElementById('compositionReviewArea').classList.add('hidden');
     document.getElementById('compositionReviewArea').innerHTML = '';
+
+    // ⭐ 수동 성분 테이블 초기화 (빈 행 1개 남기기)
+    manualCompRows = [{ name:'', cas:'', content:'', contentNum:0 }];
+    renderManualCompTable();
+
     const regBtn = document.getElementById('btnRegister');
     if(regBtn){
         regBtn.disabled = false;
         regBtn.classList.remove('opacity-50','cursor-not-allowed');
     }
 }
+
+// ⭐ 페이지 로드 시 수동 입력 테이블 초기 렌더링
+document.addEventListener('DOMContentLoaded', function(){
+    manualCompRows = [{ name:'', cas:'', content:'', contentNum:0 }];
+    setTimeout(()=>renderManualCompTable(), 300);
+});
