@@ -2,41 +2,76 @@
    [진행률 표시·MSDS 파일 처리·등록]
    ========================================================= */
 function updateProgress(pct,msg){
-    document.getElementById('progressBar').style.width=pct+'%';
-    document.getElementById('progressPercent').textContent=Math.round(pct)+'%';
+    // ⭐ Infinity/NaN 방지
+    let safePct = Number(pct);
+    if(!isFinite(safePct)) safePct = 0;
+    if(safePct < 0) safePct = 0;
+    if(safePct > 100) safePct = 100;
+
+    document.getElementById('progressBar').style.width = safePct + '%';
+    document.getElementById('progressPercent').textContent = Math.round(safePct) + '%';
     if(msg){
-        const log=document.getElementById('progressLog');
-        const p=document.createElement('p');
-        p.innerHTML=`<i class="fa-solid fa-check text-emerald-500 mr-1"></i>${msg}`;
+        const log = document.getElementById('progressLog');
+        const p = document.createElement('p');
+        p.innerHTML = `<i class="fa-solid fa-check text-emerald-500 mr-1"></i>${msg}`;
         log.appendChild(p);
-        log.scrollTop=log.scrollHeight;
+        log.scrollTop = log.scrollHeight;
     }
 }
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 let lastParsedMaterials = [];
 
 async function handleMSDSFiles(files){
-    if(!files || files.length===0) return;
+    if(!files || files.length === 0) return;
+
+    // ⭐ parseMSDSFile 가드 (스크립트 로드 실패 감지)
+    if(typeof parseMSDSFile !== 'function'){
+        alert('⚠ MSDS 파서 스크립트가 로드되지 않았습니다.\n\n브라우저 콘솔(F12)에서 오류를 확인하거나\n페이지를 새로고침(Ctrl+F5)해주세요.');
+        return;
+    }
+
     document.getElementById('uploadProgress').classList.remove('hidden');
     document.getElementById('parseResult').classList.add('hidden');
     document.getElementById('compositionReviewArea').classList.add('hidden');
-    document.getElementById('progressLog').innerHTML=''; updateProgress(0);
+    document.getElementById('progressLog').innerHTML = '';
+    updateProgress(0);
 
-    const parsedList=[];
-    for(let i=0;i<files.length;i++){
-        const f=files[i], base=(i*100)/files.length;
-        updateProgress(base+15/files.length, `📄 [${f.name}] 수신`); await sleep(150);
-        updateProgress(base+30/files.length, `🔍 [${f.name}] PDF 텍스트 추출 중…`);
-        updateProgress(base+50/files.length, `🧠 [${f.name}] 지식베이스 매칭 중…`);
-        updateProgress(base+75/files.length, `📋 [${f.name}] 3번 구성성분 추출 중…`);
-        const parsed = await parseMSDSFile(f);
-        parsedList.push(parsed);
-        updateProgress(((i+1)*100)/files.length, `✅ [${parsed.name}] → 신뢰도: ${parsed.matchConfidence} · 성분 ${parsed.composition?.length||0}개`);
+    const parsedList = [];
+    const total = files.length;
+
+    for(let i=0; i<total; i++){
+        const f = files[i];
+        const base = (i * 100) / total;   // ⭐ total이 0이면 위에서 return되므로 안전
+        const step = 100 / total;
+
+        try{
+            updateProgress(base + step*0.15, `📄 [${f.name}] 수신`); await sleep(150);
+            updateProgress(base + step*0.30, `🔍 [${f.name}] PDF 텍스트 추출 중…`);
+            updateProgress(base + step*0.50, `🧠 [${f.name}] 지식베이스 매칭 중…`);
+            updateProgress(base + step*0.75, `📋 [${f.name}] 3번 구성성분 추출 중…`);
+
+            const parsed = await parseMSDSFile(f);
+            parsedList.push(parsed);
+            updateProgress(((i+1) * 100) / total,
+                `✅ [${parsed.name}] → 신뢰도: ${parsed.matchConfidence} · 성분 ${parsed.composition?.length||0}개`);
+        } catch(err){
+            console.error('[handleMSDSFiles] 파싱 실패:', f.name, err);
+            updateProgress(((i+1) * 100) / total,
+                `❌ [${f.name}] 파싱 실패: ${err.message}`);
+        }
     }
-    updateProgress(100,'🎉 파싱 완료 — 구성성분을 검수한 후 등록하세요'); await sleep(300);
+
+    updateProgress(100, '🎉 파싱 완료 — 구성성분을 검수한 후 등록하세요');
+    await sleep(300);
+
+    if(parsedList.length === 0){
+        alert('⚠ 파싱된 파일이 없습니다. PDF 형식과 내용을 확인해주세요.');
+        return;
+    }
 
     document.getElementById('parseResult').classList.remove('hidden');
-    document.getElementById('parseResultSummary').innerHTML = parsedList.map(p=>`<b>${p.name}</b>`).join(', ');
+    document.getElementById('parseResultSummary').innerHTML =
+        parsedList.map(p=>`<b>${p.name}</b>`).join(', ');
     document.getElementById('parseDetail').innerHTML = parsedList.map(p=>`
         <div class="border-b border-emerald-100 pb-2 mb-2 last:border-0 last:mb-0 last:pb-0">
             <p class="font-bold text-emerald-900">📦 ${p.name}</p>
