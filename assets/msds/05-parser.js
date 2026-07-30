@@ -151,7 +151,7 @@ async function parseMSDSFile(file){
 }
 
 /* =========================================================
-   MSDS 3번 구성성분 파서 (v4: 근접거리 기반)
+   MSDS 3번 구성성분 파서 (v5: 정규식 안전 재작성)
    ========================================================= */
 function extractComposition(pdfText){
     const result = {
@@ -163,19 +163,21 @@ function extractComposition(pdfText){
         return result;
     }
 
-    const startMatch = pdfText.match(/3\s*[\.\)]?\s*구성성분/);
+    // ⭐ 3번 섹션 시작점 탐색
+    const startMatch = pdfText.match(/3\s*[.)]?\s*구성성분/);
     if(!startMatch){
         result.warnings.push('3번 "구성성분의 명칭 및 함유량" 항목을 찾지 못했습니다');
         return result;
     }
     const startIdx = startMatch.index;
 
+    // ⭐ 4번 섹션 시작점 탐색 (여러 후보)
     const endCandidates = [
-        /4\s*[\.\)]\s*응급/,
-        /4\s*[\.\)]\s*폭발/,
-        /4\s*[\.\)]\s*화재/,
-        /4\s*[\.\)]\s*누출/,
-        /4\s*[\.\)]\s*[가-힣]/,
+        /4\s*[.)]\s*응급/,
+        /4\s*[.)]\s*폭발/,
+        /4\s*[.)]\s*화재/,
+        /4\s*[.)]\s*누출/,
+        /4\s*[.)]\s*[가-힣]/
     ];
     let endIdx = pdfText.length;
     for(const re of endCandidates){
@@ -190,6 +192,7 @@ function extractComposition(pdfText){
     let section3 = pdfText.substring(startIdx, endIdx);
     result.rawText = section3.substring(0, 3000);
 
+    // ⭐ CAS 번호 추출
     const casPattern = /(\d{2,7}-\d{2}-\d)(\s*[\/,]?\s*KE-\d+)?/g;
     const casHits = [...section3.matchAll(casPattern)];
 
@@ -198,8 +201,9 @@ function extractComposition(pdfText){
         return result;
     }
 
+    // ⭐ 헤더/불용어 토큰
     const HEADER_TOKENS = new Set([
-        '구성성분','명칭','함유량','화학물질명','관용명','이명','異名',
+        '구성성분','명칭','함유량','화학물질명','관용명','이명',
         '및','또는','번호','식별번호','CAS','No','물질명','성분명',
         '분류','기준','비고','참고','참조','물질','성분'
     ]);
@@ -210,22 +214,25 @@ function extractComposition(pdfText){
         const hitStart = hit.index;
         const hitEnd = hit.index + hit[0].length;
 
-        const prevEnd = i === 0 ? Math.max(0, hitStart - 60)
-                                : (casHits[i-1].index + casHits[i-1][0].length);
+        // ⭐ 이 CAS의 왼쪽에서 물질명 후보 추출 (앞 CAS 뒤 ~ 현재 CAS 시작 60자 이내)
+        const prevEnd = i === 0
+            ? Math.max(0, hitStart - 60)
+            : (casHits[i-1].index + casHits[i-1][0].length);
         let nameArea = section3.substring(Math.max(prevEnd, hitStart - 60), hitStart);
 
+        // ⭐⭐⭐ 정규식 안전 재작성: 모든 특수문자는 문자 클래스에서 escape, 줄바꿈 절대 X
         nameArea = nameArea
             .replace(/구성성분[의]?\s*명칭\s*및?\s*함유량/g, ' ')
             .replace(/화학물질명/g, ' ')
             .replace(/관용명[\s및]*이명/g, ' ')
-            .replace(/[\(
-\[][異異]?名[\)\]
-]/g, ' ')
+            .replace(/[(
+\[]異?名[)\]
+]/g, ' ')           // ⭐ 줄바꿈 제거 · 한 줄로 안전
             .replace(/CAS\s*번호[\s또는]*식별번호/gi, ' ')
             .replace(/함유량\s*\(?%?\)?/g, ' ')
-            .replace(/[,\.\/\(\)
+            .replace(/[,./()
 \[\]
-|]/g, ' ')
+|]/g, ' ')              // ⭐ 줄바꿈 제거 · 한 줄로 안전
             .replace(/\d+/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
@@ -245,6 +252,7 @@ function extractComposition(pdfText){
             }
         }
 
+        // ⭐ 함유량 추출: CAS 뒤 30자 이내
         const nextHitStart = casHits[i+1] ? casHits[i+1].index : section3.length;
         const contentAreaEnd = Math.min(hitEnd + 30, nextHitStart);
         let contentArea = section3.substring(hitEnd, contentAreaEnd);
@@ -256,10 +264,10 @@ function extractComposition(pdfText){
         let contentNum = 0;
 
         const patterns = [
-            { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-\∼–]\s*(\d{1,3}(?:\.\d+)?)\s*%/, range: true },
-            { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-\∼–]\s*(\d{1,3}(?:\.\d+)?)(?!\d)/, range: true },
+            { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-∼–]\s*(\d{1,3}(?:\.\d+)?)\s*%/, range: true },
+            { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-∼–]\s*(\d{1,3}(?:\.\d+)?)(?!\d)/, range: true },
             { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*%/, range: false },
-            { re: /(?:^|\s)([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)(?!\d)/, range: false },
+            { re: /(?:^|\s)([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)(?!\d)/, range: false }
         ];
 
         for(const p of patterns){
