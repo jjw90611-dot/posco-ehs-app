@@ -388,24 +388,33 @@ function registerMaterial(){
 
     clearRegForm();
 
-    // ⭐⭐⭐ 등록된 모든 물질에 대해 자동 검수 실행 (백그라운드)
+    // ⭐⭐⭐ 등록된 모든 물질에 대해 자동 검수 실행 (혼합물 성분 전체 병렬조회)
     if(typeof autoInspectMaterial === 'function'){
         (async ()=>{
+            let totalCasChecked = 0;
+            let totalRegulated = 0;
             for(const id of registeredIds){
                 try{
-                    await autoInspectMaterial(id, false);
+                    const results = await autoInspectMaterial(id, false);
+                    if(results){
+                        totalCasChecked += results.length;
+                        totalRegulated += results.filter(x=>x.status==='REGULATED').length;
+                    }
                 }catch(e){
                     console.warn('[registerMaterial] 자동검수 실패:', id, e);
                 }
             }
             if(registeredIds.length > 0 && typeof showToast === 'function'){
-                showToast(`🔍 자동검수 완료 (${registeredIds.length}건)`);
+                showToast(`🔍 자동검수 완료: ${registeredIds.length}건 등록, ${totalCasChecked}개 CAS 조회, 규제 ${totalRegulated}건`);
             }
+            // ⭐ 자동조회 후 리스트 강제 재렌더 (분석중 → 결과 표시)
+            if(typeof renderListTable === 'function') renderListTable();
         })();
     }
 
     setTimeout(()=>goToListTab(), 800);
 }
+
 
 function clearRegForm(){
     const ids = ['reg-product','reg-process','reg-usage','reg-dept','reg-manufacturer','reg-supplier'];
