@@ -59,7 +59,8 @@ function renderListTable(){
             if(!m.cas || m.cas==='-'){
                 apiCell = `<span class="text-[10px] text-gray-400">CAS 없음</span>`;
             } else if(!cache){
-                apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-amber-50 border border-amber-300 text-amber-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-amber-100"><i class="fa-solid fa-circle-question mr-1"></i>재조회 필요</button>`;
+                // ⭐ 자동조회 대기중 표시
+                apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-blue-50 border border-blue-300 text-blue-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-blue-100"><i class="fa-solid fa-spinner spin mr-1"></i>자동조회 중…</button>`;
             } else if(cache.status==='REGULATED'){
                 const cnt = Object.values(cache.matched||{}).filter(Boolean).length;
                 apiCell = `<button onclick="event.stopPropagation(); document.getElementById('insCasInput').value='${m.cas}'; inspectCasSingle(false);" class="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded hover:bg-rose-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i>규제 매칭 ${cnt}건</button>`;
@@ -72,13 +73,25 @@ function renderListTable(){
                 return `<span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold" title="${g?g.name:code}">${g?g.name.substring(0,4):code}</span>`;
             }).join(' ') || '<span class="text-gray-400 text-[10px]">-</span>';
 
+            // ⭐⭐⭐ 법규 자동매칭 - material.laws 우선, 없으면 cache 참조
             const lawTags = [];
             if(m.isSpecial) lawTags.push('<span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold">특별관리</span>');
+            if((m.tags||[]).includes('cmr')) lawTags.push('<span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">CMR</span>');
             if((m.pictograms||[]).includes('GHS02')) lawTags.push('<span class="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-semibold">위험물</span>');
-            if(cache?.tags){
+
+            // ⭐ material.laws 에서 법규 매칭 정보 우선 사용
+            if(m.laws){
+                if(m.laws.kosha) lawTags.push('<span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold" title="산업안전보건법">산안법</span>');
+                if(m.laws.nier) lawTags.push('<span class="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold" title="화학물질관리법">화관법</span>');
+                if(m.laws.nfa) lawTags.push('<span class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold" title="위험물안전관리법">소방법</span>');
+                if(m.laws.cci) lawTags.push('<span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold" title="화학물질안전원">화안원</span>');
+            } else if(cache?.tags){
                 cache.tags.slice(0,2).forEach(t=>lawTags.push(`<span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">${t}</span>`));
             }
-            const lawHtml = lawTags.join(' ') || '<span class="text-gray-400 text-[10px]">분석중</span>';
+
+            const lawHtml = lawTags.length > 0
+                ? lawTags.join(' ')
+                : (m.cas && m.cas!=='-' ? '<span class="text-blue-500 text-[10px]"><i class="fa-solid fa-spinner spin mr-1"></i>분석중</span>' : '<span class="text-gray-400 text-[10px]">-</span>');
 
             const dept = m.deptInfo || m.dept || '-';
             const process = m.processInfo || m.process || '';
@@ -124,6 +137,11 @@ function renderListTable(){
 
     renderPagination2(totalPages);
     updateAllKPI();
+
+    // ⭐⭐⭐ 리스트 렌더링 후 미조회 CAS 자동 백그라운드 조회 (한 번만)
+    if(typeof autoInspectAllPending === 'function'){
+        setTimeout(()=>autoInspectAllPending(), 300);
+    }
 }
 
 function renderPagination2(totalPages){
@@ -245,9 +263,33 @@ function openDetailPanel(id){
                         `).join('')}
                     </tbody>
                 </table>
-                <p class="text-[10px] text-gray-500 mt-2">합계: <b>${m.compositionSum||0}%</b> ${m.compositionReviewed?'· ✅ 검수완료':'· ⚠️ 미검수'}</p>
+                <p class="text-[10px] text-gray-500 mt-2">합계: <b>${m.compositionSum||0}%</b> ${m.compositionReviewed?'· ✅ 검수완료':''}</p>
             </div>
         </div>`;
+    }
+
+    // ⭐⭐⭐ 법규 자동매칭 결과 표시
+    let lawsHtml = '';
+    if(m.laws){
+        const lawItems = [];
+        if(m.laws.kosha) lawItems.push('<li>✓ KOSHA MSDS <b>등재</b> (산업안전보건법)</li>');
+        if(m.laws.nier) lawItems.push('<li>✓ 환경공단 <b>화관법 유독물질</b> 해당</li>');
+        if(m.laws.nfa) lawItems.push('<li>✓ 소방청 <b>위험물</b> 지정 (위험물안전관리법)</li>');
+        if(m.laws.cci) lawItems.push('<li>✓ 화학물질안전원 <b>안전관리정보</b> 등재</li>');
+        if(m.envTarget) lawItems.push(`<li>✓ 작업환경측정 대상 (${m.envCycle||6}개월 주기)</li>`);
+        if(m.healthTarget) lawItems.push(`<li>✓ 특수건강진단 대상 (${m.healthCycle||12}개월 주기)</li>`);
+
+        if(lawItems.length > 0){
+            const checkedDate = m.laws.checkedAt ? new Date(m.laws.checkedAt).toLocaleString() : '-';
+            lawsHtml = `
+            <div>
+                <p class="text-xs font-bold text-gray-500 mb-1">⚖️ 법규 자동매칭 결과 <span class="text-[10px] text-gray-400">(공식 API 검수)</span></p>
+                <ul class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 space-y-1 text-xs text-indigo-900">
+                    ${lawItems.join('')}
+                </ul>
+                <p class="text-[10px] text-gray-400 mt-1">📅 검수일시: ${checkedDate}</p>
+            </div>`;
+        }
     }
 
     document.getElementById('dp-body').innerHTML = `
@@ -266,6 +308,7 @@ function openDetailPanel(id){
             </div>
         </div>
         ${compHtml}
+        ${lawsHtml}
         <div>
             <p class="text-xs font-bold text-gray-500 mb-1">신호어 · GHS 픽토그램</p>
             <div class="bg-slate-50 rounded-lg p-3 flex items-center gap-2">
@@ -287,6 +330,7 @@ function openDetailPanel(id){
             <button onclick="viewInLabelTab('${m.id}'); closeDetailPanel();" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2 rounded-lg">
                 <i class="fa-solid fa-tag mr-1"></i>경고표지 보기
             </button>
+            ${m.cas && m.cas!=='-' ? `<button onclick="autoInspectMaterial('${m.id}', true); closeDetailPanel();" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold py-2 px-4 rounded-lg"><i class="fa-solid fa-satellite-dish mr-1"></i>재검수</button>`:''}
             <button onclick="deleteMaterial('${m.id}'); closeDetailPanel();" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold py-2 px-4 rounded-lg">
                 <i class="fa-solid fa-trash mr-1"></i>삭제
             </button>
@@ -315,6 +359,13 @@ function exportList2Excel(){
         '신호어': m.signalWord||'-',
         '픽토그램': (m.pictograms||[]).join(', '),
         '특별관리물질': m.isSpecial ? 'Y' : 'N',
+        'CMR': (m.tags||[]).includes('cmr') ? 'Y' : 'N',
+        '산안법(KOSHA)': m.laws?.kosha ? 'Y' : 'N',
+        '화관법(NIER)': m.laws?.nier ? 'Y' : 'N',
+        '소방법(NFA)': m.laws?.nfa ? 'Y' : 'N',
+        '화안원(CCI)': m.laws?.cci ? 'Y' : 'N',
+        '작업환경측정': m.envTarget ? '대상' : '-',
+        '특수건강진단': m.healthTarget ? '대상' : '-',
         '유해위험문구': (m.hazards||[]).join(' / '),
         '구성성분': (m.composition||[]).map(c=>`${c.name}(${c.cas}) ${c.content}`).join(' / '),
         '등록일': m.uploadedAt ? new Date(m.uploadedAt).toISOString().slice(0,10) : '-'
@@ -330,8 +381,8 @@ function updateAllKPI(){
     const total = MATERIALS.length;
     const special = MATERIALS.filter(m=>m.isSpecial).length;
     const cmr = MATERIALS.filter(m=>(m.tags||[]).includes('cmr') || (m.hazards||[]).some(h=>h.includes('발암')||h.includes('생식')||h.includes('변이원'))).length;
-    const envTarget = MATERIALS.filter(m=>m.isSpecial || (m.hazards||[]).some(h=>h.includes('발암')||h.includes('생식'))).length;
-    const healthTarget = MATERIALS.filter(m=>m.isSpecial).length;
+    const envTarget = MATERIALS.filter(m=>m.envTarget || m.isSpecial || (m.hazards||[]).some(h=>h.includes('발암')||h.includes('생식'))).length;
+    const healthTarget = MATERIALS.filter(m=>m.healthTarget || m.isSpecial).length;
 
     const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
     set('k2-total', total);
