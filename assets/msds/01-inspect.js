@@ -120,6 +120,162 @@ function demoInspect(cas){
     };
 }
 
+/* =========================================================
+   ⭐⭐⭐ [신규] 자동 검수 → material 필드 반영
+   ========================================================= */
+function applyInspectionToMaterial(material, inspection){
+    if(!material || !inspection || !inspection.ok) return false;
+
+    let updated = false;
+    const tags = inspection.tags || [];
+    const matched = inspection.matched || {};
+
+    // 1) 태그 병합 (중복 제거)
+    if(!material.tags) material.tags = [];
+    tags.forEach(t=>{
+        if(!material.tags.includes(t)) {
+            material.tags.push(t);
+            updated = true;
+        }
+    });
+
+    // 2) 특별관리물질 여부 자동 설정
+    if(tags.some(t=>t.includes('특별관리'))){
+        if(!material.isSpecial){
+            material.isSpecial = true;
+            updated = true;
+        }
+    }
+
+    // 3) CMR (발암·변이·생식) 태그 자동 추가
+    const isCMR = tags.some(t=>
+        t.includes('발암') || t.includes('변이') || t.includes('생식')
+    );
+    if(isCMR && !material.tags.includes('cmr')){
+        material.tags.push('cmr');
+        updated = true;
+    }
+
+    // 4) 작업환경측정·특수건진 대상 자동 설정
+    if(material.isSpecial || isCMR){
+        if(!material.envTarget){
+            material.envTarget = true;
+            material.envCycle = 6;  // 6개월
+            updated = true;
+        }
+        if(!material.healthTarget){
+            material.healthTarget = true;
+            material.healthCycle = 12;  // 12개월
+            updated = true;
+        }
+    }
+
+    // 5) 법규 매핑 자동 저장
+    if(!material.laws) material.laws = {};
+    material.laws.kosha = !!matched.kosha;
+    material.laws.nier = !!matched.nier;
+    material.laws.nfa = !!matched.nfa;
+    material.laws.cci = !!matched.cci;
+    material.laws.checkedAt = inspection.checkedAt;
+    material.laws.status = inspection.status;
+    updated = true;
+
+    // 6) 매칭 이름이 있으면 subtitle 보정
+    if(inspection.matchedName && (!material.subtitle || material.subtitle === '수동 등록' || material.subtitle === '-')){
+        material.subtitle = inspection.matchedName + ' (' + material.cas + ')';
+        updated = true;
+    }
+
+    return updated;
+}
+
+/* =========================================================
+   ⭐⭐⭐ [신규] 단일 물질 자동 검수 (등록 직후 호출)
+   ========================================================= */
+async function autoInspectMaterial(materialId, showToastMsg=true){
+    const m = MATERIALS.find(x=>x.id===materialId);
+    if(!m || !m.cas || m.cas === '-'){
+        console.log('[autoInspect] 스킵 (CAS 없음):', materialId);
+        return null;
+    }
+
+    try{
+        const result = await inspectByCas(m.cas, false);
+        if(result && result.ok){
+            const updated = applyInspectionToMaterial(m, result);
+            if(updated){
+                saveMATERIALS();
+                if(typeof renderListTable === 'function') renderListTable();
+                if(typeof updateAllKPI === 'function') updateAllKPI();
+                if(typeof applyMaterialToForms === 'function'){
+                    applyMaterialToForms(MATERIALS.find(x=>x.id===materialId));
+                }
+                if(showToastMsg && typeof showToast === 'function'){
+                    if(result.status === 'REGULATED'){
+                        const cnt = Object.values(result.matched||{}).filter(Boolean).length;
+                        showToast(`🔍 자동검수 완료: 규제 매칭 ${cnt}건 (${m.cas})`);
+                    } else {
+                        showToast(`🔍 자동검수 완료: 매칭 없음 (${m.cas})`);
+                    }
+                }
+            }
+            return result;
+        }
+    }catch(e){
+        console.warn('[autoInspect] 실패:', m.cas, e.message);
+    }
+    return null;
+}
+
+/* =========================================================
+   ⭐⭐⭐ [신규] 리스트 진입 시 미조회 물질 백그라운드 자동조회
+   ========================================================= */
+let _autoInspectRunning = false;
+async function autoInspectAllPending(){
+    if(_autoInspectRunning) return;
+    _autoInspectRunning = true;
+
+    try{
+        const pending = MATERIALS.filter(m=>{
+            if(!m.cas || m.cas === '-') return false;
+            return !InspectCache.get(m.cas);
+        });
+
+        if(pending.length === 0){
+            _autoInspectRunning = false;
+            return;
+        }
+
+        console.log(`[autoInspectAllPending] ${pending.length}건 백그라운드 조회 시작`);
+        insLog(`🤖 자동 검수 시작 (${pending.length}건 대기)`);
+
+        const BATCH = 3;
+        for(let i=0; i<pending.length; i+=BATCH){
+            const batch = pending.slice(i, i+BATCH);
+            await Promise.all(batch.map(async m=>{
+                try{
+                    const r = await inspectByCas(m.cas, false);
+                    if(r && r.ok){
+                        applyInspectionToMaterial(m, r);
+                        insLog(`  ✓ ${m.cas} (${m.name}) → ${r.status}`);
+                    }
+                }catch(e){
+                    insLog(`  ✗ ${m.cas} ${e.message}`);
+                }
+            }));
+            // 배치 간 짧은 딜레이 (서버 부하 방지)
+            await new Promise(r=>setTimeout(r, 200));
+        }
+
+        saveMATERIALS();
+        if(typeof renderListTable === 'function') renderListTable();
+        if(typeof updateAllKPI === 'function') updateAllKPI();
+        insLog(`🎉 자동 검수 완료`);
+    } finally {
+        _autoInspectRunning = false;
+    }
+}
+
 function insLog(msg){
     const box = document.getElementById('insLog');
     if(!box) return;
@@ -138,6 +294,23 @@ async function inspectCasSingle(forceRefresh){
         const result = await inspectByCas(cas, forceRefresh);
         renderInspectModal(cas, result);
         insLog(`✅ ${cas} 완료 · ${result.fromCache?'캐시 사용':'신규 조회'} · ${result.status}`);
+
+        // ⭐ 해당 CAS를 쓰는 material 이 있으면 자동으로 규제정보 반영
+        if(result.ok){
+            let anyUpdated = false;
+            MATERIALS.forEach(m=>{
+                if(m.cas === cas){
+                    if(applyInspectionToMaterial(m, result)) anyUpdated = true;
+                }
+            });
+            if(anyUpdated){
+                saveMATERIALS();
+                if(typeof applyMaterialToForms === 'function' && selectedMaterialId){
+                    applyMaterialToForms(MATERIALS.find(m=>m.id===selectedMaterialId));
+                }
+            }
+        }
+
         renderListTable();
         updateInspectKpi();
     }catch(e){
@@ -157,12 +330,15 @@ async function reinspectAll(){
         await Promise.all(batch.map(async m=>{
             try{
                 const r = await inspectByCas(m.cas, true);
+                // ⭐ 재조회 결과도 material 에 자동 반영
+                if(r && r.ok) applyInspectionToMaterial(m, r);
                 insLog(`  · ${m.cas} (${m.name}) → ${r.status}`);
             }catch(e){
                 insLog(`  · ${m.cas} ❌ ${e.message}`);
             }
         }));
     }
+    saveMATERIALS();
     renderListTable();
     updateInspectKpi();
     insLog(`🎉 전체 재조회 완료`);
