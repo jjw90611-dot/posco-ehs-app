@@ -9,10 +9,17 @@ document.addEventListener('DOMContentLoaded', ()=>{
             btn.classList.add('active');
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.getElementById(targetId).classList.add('active');
-            if(targetId === 'tab-list') renderListTable();
+            if(targetId === 'tab-list'){
+                renderListTable();
+                // ⭐⭐⭐ 리스트 탭 진입 시 자동조회 1회만 실행
+                if(typeof startAutoInspectOnce === 'function'){
+                    startAutoInspectOnce();
+                }
+            }
         });
     });
 });
+
 
 /* =========================================================
    [2] 공통 유틸
