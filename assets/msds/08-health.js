@@ -2,18 +2,17 @@
    [6] ⑤ 특수건강진단 (「안심건강 근로제」)
    ========================================================= */
 
-// ⭐ 고정 예시 데이터 (검진일: 2026-07-30, 홍길동 45세, 모두 적격)
+// ⭐ 고정 예시 데이터
 const HEALTH_EXAMPLE = {
     dept: '예시부서', name: '홍길동', birth: '1980-05-15', gender: '남',
-    date: '2026-07-30',   // ⭐ 오늘 날짜로 변경
+    date: '2026-07-30',
     sbp: 120, dbp: 80, glucose: 95, tg: 150, ldl: 110,
     elder: '', consent: '○', note: '',
     file_report: null, file_consent: null, file_elder: null,
     _isExample: true
 };
 
-// ⭐⭐⭐ 기존 샘플 데이터 (홍길동/김철수/이영희/조진우) 자동 클리어
-// (1회만 실행되도록 플래그 사용)
+// ⭐ 기존 샘플 데이터 자동 클리어
 if(!localStorage.getItem('pfm_healths_cleared_v2')){
     localStorage.removeItem('pfm_healths');
     localStorage.setItem('pfm_healths_cleared_v2', '1');
@@ -24,25 +23,22 @@ function saveHealthLS(){
     try {
         localStorage.setItem('pfm_healths', JSON.stringify(healths));
     } catch(e) {
-        alert('⚠ 저장 공간이 부족합니다.\n오래된 파일을 삭제하거나 서버 저장소로 전환이 필요합니다.\n\n' + e.message);
+        alert('⚠ 저장 공간이 부족합니다.\n' + e.message);
     }
 }
 
-// ⭐⭐⭐ 생년월일 자동 포맷: "19901221" → "1990-12-21"
+// ⭐ 생년월일 자동 포맷: "19901221" → "1990-12-21"
 function formatBirth(input){
     if(!input) return '';
-    // 숫자만 추출
-    const digits = String(input).replace(/[^0-9]/g, '');
+    const s = String(input).trim();
+    const digits = s.replace(/[^0-9]/g, '');
     if(digits.length === 8){
-        // YYYYMMDD → YYYY-MM-DD
         return `${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6,8)}`;
     }
-    // 이미 YYYY-MM-DD 형식이면 그대로
-    if(/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
-    return input;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    return s;
 }
 
-// ⭐ 만 나이 계산
 function calcAge(birth, refDate){
     if(!birth) return 0;
     const b = new Date(birth);
@@ -54,7 +50,6 @@ function calcAge(birth, refDate){
     return age < 0 ? 0 : age;
 }
 
-// ⭐ 유효기간
 function calcValid(d, birth){
     if(!d) return '';
     const x = new Date(d);
@@ -68,7 +63,6 @@ function calcValid(d, birth){
     return x.toISOString().slice(0,10);
 }
 
-// ⭐ 안심건강 근로제 기준 판정
 function judgeHealth(h){
     const r=[];
     if(h.sbp>=160 || (h.sbp>0 && h.sbp<90)) r.push('SBP(수축기)');
@@ -76,7 +70,6 @@ function judgeHealth(h){
     if(h.glucose>=180 || (h.glucose>0 && h.glucose<70)) r.push('공복혈당');
     if(h.tg>=500) r.push('T.G(중성지방)');
     if(h.ldl>=190) r.push('LDL콜레스테롤');
-    // ⭐ 서류 3종 검증 (예시는 파일 검증 제외)
     if(!h._isExample){
         if(!h.file_report) r.push('검진결과서 미제출');
         if(h.consent !== '○' || !h.file_consent) r.push('개인정보동의서');
@@ -110,7 +103,6 @@ function uploadHealthFile(idx, fileType, inputEl){
     reader.readAsDataURL(file);
 }
 
-// ⭐ 파일 보기
 function viewHealthFile(idx, fileType){
     const isEx = idx < 0;
     const record = isEx ? HEALTH_EXAMPLE : healths[idx];
@@ -128,7 +120,6 @@ function viewHealthFile(idx, fileType){
     }
 }
 
-// ⭐ 파일 삭제
 function deleteHealthFile(idx, fileType){
     if(idx < 0){ showToast('⚠ 예시 파일은 삭제할 수 없습니다'); return; }
     if(!confirm('파일을 삭제하시겠습니까?')) return;
@@ -139,7 +130,6 @@ function deleteHealthFile(idx, fileType){
     showToast('🗑 파일이 삭제되었습니다');
 }
 
-// ⭐ 파일 상태 뱃지 HTML
 function fileButtonHtml(idx, fileType, label, icon){
     const isEx = idx < 0;
     const record = isEx ? HEALTH_EXAMPLE : healths[idx];
@@ -192,11 +182,21 @@ function renderHealth(){
         return true;
     });
 
+    // ⭐⭐⭐ [이슈5 수정] KPI 계산 로직 개선
+    // - 만료(expired): 유효기간이 이미 지남 (dday < 0)
+    // - 임박(soon): 유효기간 만료 30일 前 이내 (0 ≤ dday ≤ 30)
     healths.forEach(h=>{
         const reasons = judgeHealth(h);
         if(reasons.length) bad++; else ok++;
         const v = calcValid(h.date, h.birth);
-        if(v){ const d=Math.ceil((new Date(v)-today)/86400000); if(d<0) expired++; else if(d<30) soon++; }
+        if(v){
+            const dday = Math.ceil((new Date(v) - today) / 86400000);
+            if(dday < 0){
+                expired++;
+            } else if(dday <= 30){   // ⭐ 0~30일 사이 (임박)
+                soon++;
+            }
+        }
     });
 
     filtered.forEach((h,i)=>{
@@ -209,6 +209,17 @@ function renderHealth(){
 
         const ageAtExam = calcAge(h.birth, h.date);
         const ageToday = calcAge(h.birth);
+
+        // ⭐ 유효기간 임박/만료 상태 배지
+        let statusBadge = '';
+        if(valid){
+            const dday = Math.ceil((new Date(valid) - today) / 86400000);
+            if(dday < 0){
+                statusBadge = `<div style="font-size:9px;color:#fff;background:#dc2626;font-weight:bold;margin-top:2px;padding:1px 4px;border-radius:3px;display:inline-block">⛔ 만료 (D+${Math.abs(dday)})</div>`;
+            } else if(dday <= 30){
+                statusBadge = `<div style="font-size:9px;color:#fff;background:#f59e0b;font-weight:bold;margin-top:2px;padding:1px 4px;border-radius:3px;display:inline-block">⏰ 임박 (D-${dday})</div>`;
+            }
+        }
 
         let validBadge = '';
         if(ageAtExam >= 70){
@@ -223,50 +234,68 @@ function renderHealth(){
         const editable = isEx ? '' : 'contenteditable="true"';
         const label = isEx ? '<span title="예시 (편집 불가)" style="color:#a16207;font-weight:bold;">🔒 예시</span>' : (i+1);
 
-        // ⭐⭐⭐ 삭제 버튼: 더 눈에 띄게 개선 (아이콘 + 배경색)
         const delBtn = isEx
             ? `<button disabled title="예시는 삭제 불가" style="background:#e5e7eb;color:#9ca3af;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:not-allowed">🔒 예시</button>`
             : `<button onclick="delHealth(${idx})" title="이 행 삭제" style="background:#ef4444;color:white;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer">🗑 삭제</button>`;
 
+        // ⭐⭐⭐ [이슈2 수정] 만 나이 셀 - 예시 텍스트 제거 (편집 불가로 자동 계산만)
         const ageCell = h.birth
-            ? `<td style="background:#f9fafb;color:#1f2937;font-weight:bold" title="검진일 시점 만 나이 (오늘 기준: 만 ${ageToday}세)">만 ${ageAtExam}세</td>`
-            : `<td style="color:#9ca3af;font-style:italic">생년월일 입력</td>`;
+            ? `<td style="background:#f9fafb;color:#1f2937;font-weight:bold;text-align:center" title="검진일 시점 만 나이 (오늘 기준: 만 ${ageToday}세)">만 ${ageAtExam}세</td>`
+            : `<td style="text-align:center;color:#d1d5db">－</td>`;
+
+        // ⭐⭐⭐ [이슈1-A, 1-B 수정] 성명 셀 구조 완전 재설계
+        // - 이름 입력창(input)과 파일 버튼 영역을 완전히 분리
+        // - input에는 placeholder 속성 사용 (텍스트가 값에 포함되지 않음)
+        // - 파일 버튼 영역은 contenteditable=false로 격리
+        const nameInputHtml = isEx
+            ? `<div style="font-weight:bold;font-size:12px;margin-bottom:4px">${h.name||''}</div>`
+            : `<input type="text" value="${(h.name||'').replace(/"/g,'&quot;')}" placeholder="성명 입력"
+                       onblur="updateHealthName(${idx}, this.value)"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+                       style="width:100%;font-weight:bold;font-size:12px;padding:3px 5px;border:1px solid #e5e7eb;border-radius:3px;margin-bottom:4px;box-sizing:border-box">`;
 
         const nameWithFilesCell = `
-            <td ${editable} data-f="name" style="min-width:180px;padding:6px">
-                <div style="font-weight:bold;font-size:12px;margin-bottom:4px">${h.name||'<span style=\"color:#9ca3af\">성명 입력</span>'}</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px" onclick="event.stopPropagation()">
+            <td style="min-width:180px;padding:6px;vertical-align:top">
+                ${nameInputHtml}
+                <div contenteditable="false" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px" onclick="event.stopPropagation()">
                     ${fileButtonHtml(idx, 'file_report', '검진결과', '📋')}
                     ${fileButtonHtml(idx, 'file_consent', '동의서', '📝')}
                     ${fileButtonHtml(idx, 'file_elder', '고령확인', '👴')}
                 </div>
             </td>`;
 
-        // ⭐⭐⭐ 검토결과 셀: 인라인 스타일로 강제 (기존 CSS가 X 표시 등 오작동 방지)
+        // ⭐⭐⭐ [이슈2 수정] 생년월일 셀 - placeholder를 title(툴팁)로만 표시
+        // 편집 가능하되, 빈 값일 때는 아무것도 표시 안 함 (마우스 올리면 툴팁)
+        const birthCell = isEx
+            ? `<td style="min-width:110px">${h.birth||''}</td>`
+            : `<td contenteditable="true" data-f="birth" title="19901221 또는 1990-12-21 형식으로 입력" style="min-width:110px">${h.birth||''}</td>`;
+
         const resultCell = result === '적격'
             ? `<td style="background:#d1fae5;color:#065f46;font-weight:bold;text-align:center">✅ 적격</td>`
             : `<td style="background:#fee2e2;color:#991b1b;font-weight:bold;text-align:center">❌ 부적격</td>`;
 
+        // ⭐⭐⭐ [이슈3 수정] 컬럼 순서 명확화
+        // 구분 | 부서명 | 성명+서류 | 생년월일 | 만나이 | 성별 | 검진일자 | 유효기간 | 부적격기준 | 5개수치 | 기타 | 검토결과 | 삭제
         tbody.innerHTML += `
             <tr data-idx="${idx}" ${rowStyle}>
-                <td>${label}</td>
+                <td style="text-align:center">${label}</td>
                 <td ${editable} data-f="dept">${h.dept||''}</td>
                 ${nameWithFilesCell}
-                <td ${editable} data-f="birth" title="19901221 처럼 8자리 숫자 입력 시 자동 변환됨" style="min-width:110px">${h.birth||'<span style=\"color:#9ca3af;font-style:italic;font-size:11px\">예: 19901221</span>'}</td>
+                ${birthCell}
                 ${ageCell}
-                <td ${editable} data-f="gender">${h.gender||''}</td>
-                <td ${editable} data-f="date">${h.date||''}</td>
-                <td class="col-valid">${valid}${validBadge}</td>
+                <td ${editable} data-f="gender" style="text-align:center">${h.gender||''}</td>
+                <td ${editable} data-f="date" style="text-align:center">${h.date||''}</td>
+                <td class="col-valid" style="text-align:center">${valid}${validBadge}${statusBadge}</td>
                 <td class="col-criteria" style="font-size:9px;line-height:1.3">
                     SBP&lt;160/DBP&lt;100<br>
                     혈당70~180<br>
                     LDL&lt;190/TG&lt;500
                 </td>
-                <td ${editable} data-f="sbp" class="${isBad(h.sbp,160,90)?'val-bad':''}">${h.sbp||''}</td>
-                <td ${editable} data-f="dbp" class="${isBad(h.dbp,100,50)?'val-bad':''}">${h.dbp||''}</td>
-                <td ${editable} data-f="glucose" class="${isBad(h.glucose,180,70)?'val-bad':''}">${h.glucose||''}</td>
-                <td ${editable} data-f="tg" class="${isBad(h.tg,500)?'val-bad':''}">${h.tg||''}</td>
-                <td ${editable} data-f="ldl" class="${isBad(h.ldl,190)?'val-bad':''}">${h.ldl||''}</td>
+                <td ${editable} data-f="sbp" class="${isBad(h.sbp,160,90)?'val-bad':''}" style="text-align:center">${h.sbp||''}</td>
+                <td ${editable} data-f="dbp" class="${isBad(h.dbp,100,50)?'val-bad':''}" style="text-align:center">${h.dbp||''}</td>
+                <td ${editable} data-f="glucose" class="${isBad(h.glucose,180,70)?'val-bad':''}" style="text-align:center">${h.glucose||''}</td>
+                <td ${editable} data-f="tg" class="${isBad(h.tg,500)?'val-bad':''}" style="text-align:center">${h.tg||''}</td>
+                <td ${editable} data-f="ldl" class="${isBad(h.ldl,190)?'val-bad':''}" style="text-align:center">${h.ldl||''}</td>
                 <td ${editable} data-f="note" style="text-align:left;white-space:normal;min-width:200px">${autoNote}</td>
                 ${resultCell}
                 <td style="text-align:center">${delBtn}</td>
@@ -282,39 +311,32 @@ function renderHealth(){
     const hdrHealth = document.getElementById('hdr-health');
     if(hdrHealth) hdrHealth.textContent = healths.length;
 
+    // ⭐ contenteditable 셀 이벤트 바인딩 (input, 파일버튼 제외)
     document.querySelectorAll('#healthBody td[contenteditable="true"]').forEach(td=>{
         td.onblur = ()=>{
             const idx = parseInt(td.parentElement.dataset.idx);
             if(idx < 0) return;
             const f = td.dataset.f;
+            if(!f) return;   // ⭐ data-f 없는 셀은 스킵
             let v = td.textContent.trim();
 
             if(['sbp','dbp','glucose','tg','ldl'].includes(f)) v = parseFloat(v)||0;
 
-            if(f === 'name'){
-                v = td.querySelector('div') ? td.querySelector('div').textContent.trim() : v;
-            }
-
-            // ⭐⭐⭐ 생년월일 자동 포맷: 19901221 → 1990-12-21
             if(f === 'birth'){
                 v = formatBirth(v);
                 if(v && !/^\d{4}-\d{2}-\d{2}$/.test(v)){
                     alert('생년월일 입력 형식이 잘못되었습니다.\n\n✅ 올바른 예:\n  • 19901221\n  • 1990-12-21');
-                    renderHealth();
-                    return;
+                    renderHealth(); return;
                 }
-                // 실제 유효한 날짜인지 확인
                 if(v){
                     const test = new Date(v);
                     if(isNaN(test.getTime()) || test.toISOString().slice(0,10) !== v){
                         alert('존재하지 않는 날짜입니다: ' + v);
-                        renderHealth();
-                        return;
+                        renderHealth(); return;
                     }
                 }
             }
 
-            // ⭐ 검진일도 자동 포맷 지원 (덤)
             if(f === 'date'){
                 v = formatBirth(v);
             }
@@ -324,6 +346,15 @@ function renderHealth(){
         };
         td.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); td.blur(); } };
     });
+}
+
+// ⭐⭐⭐ [이슈1-A 수정] 이름 전용 업데이트 함수 (input 태그 사용)
+function updateHealthName(idx, value){
+    if(idx < 0) return;
+    healths[idx].name = value.trim();
+    saveHealthLS();
+    // ⭐ 이름만 변경 시 렌더 안 함 (파일 UI 유지, 포커스 유지)
+    // 필터/KPI가 이름과 무관하므로 재렌더 불필요
 }
 
 function addHealthRow(){
@@ -379,7 +410,7 @@ function downloadExcel(){
             '구분':i+1, '부서명':h.dept, '성명':h.name,
             '생년월일':h.birth||'',
             '만나이(검진일)': h.birth ? `만 ${ageAtExam}세` : '',
-            '성별':h.gender, '검진일':h.date, '유효기간':calcValid(h.date, h.birth),
+            '성별':h.gender, '검진일자':h.date, '유효기간':calcValid(h.date, h.birth),
             'SBP':h.sbp, 'DBP':h.dbp, '공복혈당':h.glucose, 'T.G':h.tg, 'LDL':h.ldl,
             '검진결과서': h.file_report ? '✅ '+h.file_report.name : '❌ 미제출',
             '동의서': h.file_consent ? '✅ '+h.file_consent.name : '❌ 미제출',
@@ -407,8 +438,9 @@ function importExcel(e){
         rows.forEach(r=>{
             healths.push({
                 dept:r['부서명']||'', name:r['성명']||'',
-                birth:formatBirth(r['생년월일']||''),   // ⭐ 엑셀 임포트도 자동 포맷
-                gender:r['성별']||'', date:formatBirth(r['검진일']||''),
+                birth:formatBirth(r['생년월일']||''),
+                gender:r['성별']||'',
+                date:formatBirth(r['검진일자']||r['검진일']||''),
                 sbp:Number(r['SBP'])||0, dbp:Number(r['DBP'])||0,
                 glucose:Number(r['공복혈당'])||0, tg:Number(r['T.G'])||0, ldl:Number(r['LDL'])||0,
                 elder:'', consent:'', note:r['기타']||'',
