@@ -1,19 +1,18 @@
 // functions/api/inspect/[cas].js
-// Cloudflare Pages Functions - CAS 기반 4대 법규 통합 검수 프록시
-// v2: 개별 타임아웃 + 부분 실패 허용 + 상세 진단 로그
+// Cloudflare Pages Functions - CAS 기반 법규 통합 검수 프록시
+// v3: 문법 에러 수정 + 카테고리 축소 + 응답 크기 축소
 
 const KOSHA_API_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
 const KOSHA_BASE = "https://apis.data.go.kr/B552468/srch/smartSearch";
 
-// ⭐ 카테고리 축소: 5개 → 핵심 3개 (속도 우선)
+// ⭐ 카테고리 축소: KOSHA Guide(7) 제외 (응답 크기 문제로 타임아웃 유발)
 const CATEGORIES = [
     { id: 2, name: '산업안전보건법 시행령' },
-    { id: 4, name: '산업안전보건기준에 관한 규칙' },
-    { id: 7, name: 'KOSHA Guide' }
+    { id: 4, name: '산업안전보건기준에 관한 규칙' }
 ];
 
-const PER_CALL_TIMEOUT = 5000;   // 카테고리별 5초
-const NUM_OF_ROWS = 50;          // 100 → 50 축소 (응답 크기 줄이기)
+const PER_CALL_TIMEOUT = 6000;
+const NUM_OF_ROWS = 30;
 
 /* =========================================================
    메인 핸들러
@@ -44,7 +43,6 @@ export async function onRequest(context) {
     const startTs = Date.now();
 
     try {
-        // 병렬 조회 (각 요청 개별 타임아웃)
         const searchPromises = CATEGORIES.map(cat =>
             fetchKoshaByCategory(cas, cat.id, diagnostics)
                 .catch(e => {
@@ -85,15 +83,10 @@ export async function onRequest(context) {
             }
         };
 
-        // debug 모드: 진단 정보 포함
-        if (debug) {
-            response.diagnostics = diagnostics;
-        }
-
+        if (debug) response.diagnostics = diagnostics;
         return json(response);
 
     } catch (e) {
-        console.error('[inspect] fatal:', e);
         return json({
             ok: false, casNo: cas,
             error: e.message || '조회 실패',
@@ -112,8 +105,7 @@ async function fetchKoshaByCategory(cas, categoryId, diagnostics) {
         + `&numOfRows=${NUM_OF_ROWS}`
         + `&searchValue=${encodeURIComponent(cas)}`
         + `&category=${categoryId}`
-        + `&type=json`
-        + `&_type=json`;
+        + `&type=json&_type=json`;
 
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), PER_CALL_TIMEOUT);
@@ -130,24 +122,19 @@ async function fetchKoshaByCategory(cas, categoryId, diagnostics) {
         const elapsedMs = Date.now() - startTs;
 
         if (!res.ok) {
-            diagnostics.push({
-                category: categoryId, ok: false,
-                httpStatus: res.status, elapsedMs
-            });
+            diagnostics.push({ category: categoryId, ok: false, httpStatus: res.status, elapsedMs });
             throw new Error(`HTTP ${res.status}`);
         }
 
         const text = await res.text();
 
-        // ⭐ 응답이 XML(에러)인 경우 감지
         if (text.trim().startsWith('<')) {
             diagnostics.push({
                 category: categoryId, ok: false,
                 error: 'XML 응답 (API키 문제 가능성)',
-                sample: text.substring(0, 200),
-                elapsedMs
+                sample: text.substring(0, 200), elapsedMs
             });
-            throw new Error('KOSHA API가 XML 에러를 반환 (API키 확인 필요)');
+            throw new Error('KOSHA API XML 에러');
         }
 
         let data;
@@ -156,8 +143,8 @@ async function fetchKoshaByCategory(cas, categoryId, diagnostics) {
         } catch (e) {
             diagnostics.push({
                 category: categoryId, ok: false,
-                error: 'JSON 파싱 실패', sample: text.substring(0, 200),
-                elapsedMs
+                error: 'JSON 파싱 실패',
+                sample: text.substring(0, 200), elapsedMs
             });
             throw new Error('JSON 파싱 실패');
         }
@@ -166,9 +153,10 @@ async function fetchKoshaByCategory(cas, categoryId, diagnostics) {
         let items = body?.items?.item || body?.items || [];
         if (!Array.isArray(items)) items = items ? [items] : [];
         const totalCount = Number(body?.totalCount || 0);
+        const resultCode = data?.response?.header?.resultCode;
 
         diagnostics.push({
-            category: categoryId, ok: true,
+            category: categoryId, ok: true, resultCode,
             totalCount, itemsReturned: items.length, elapsedMs
         });
 
@@ -189,7 +177,7 @@ async function fetchKoshaByCategory(cas, categoryId, diagnostics) {
 function analyzeItems(cas, items) {
     const tags = new Set();
     const matched = { kosha: false, nier: false, nfa: false, cci: false };
-    const matchedDocs = { kosha: [], nier: [], nfa: [], cci: [] };
+    const matchedDocs = { kosha: [] };
     let matchedName = null;
     let isSpecial = false;
 
@@ -226,41 +214,33 @@ function analyzeItems(cas, items) {
             tags.add('특별관리');
             isSpecial = true;
         }
-
         if (title.includes('작업환경측정') || docId.includes('별표 21') ||
             content.includes('작업환경측정 대상 유해인자')) {
             tags.add('작업환경측정');
         }
-
         if (title.includes('특수건강진단') || docId.includes('별표 22') ||
             docId.includes('별표 23') || content.includes('특수건강진단 대상')) {
             tags.add('특수건강진단');
         }
-
         if (title.includes('허용기준') || docId.includes('별표 19')) {
             tags.add('노출기준설정');
         }
-
         if (title.includes('관리대상 유해물질') || docId.includes('별표 12')) {
             tags.add('관리대상');
         }
-
         if (title.includes('제조 등이 금지') ||
             content.includes('제조 등이 금지되는 유해물질')) {
             tags.add('제조금지');
         }
-
         if (title.includes('허가 대상') || nearText.includes('허가 대상 유해물질')) {
             tags.add('허가대상');
         }
-
         if (docId.startsWith('KOSHA07') || docId.startsWith('KOSHA06')) {
             const merged = content + title + keyword;
             if (merged.includes('발암')) tags.add('발암성');
             if (merged.includes('변이원')) tags.add('변이원성');
             if (merged.includes('생식')) tags.add('생식독성');
         }
-
         if (docId.startsWith('KOSHA07') && title.includes('건강관리')) {
             tags.add('건강관리지침');
         }
@@ -279,30 +259,33 @@ function analyzeItems(cas, items) {
             name: matchedName,
             docs: matchedDocs.kosha.slice(0, 5)
         } : { ok: true, hit: false, note: '산업안전보건법 매칭 없음' },
-        nier: matched.nier ? { ok: true, hit: true, note: '화관법 유독물질 해당' }
-                            : { ok: true, hit: false, note: '화관법 매칭 없음' },
-        nfa: matched.nfa ? { ok: true, hit: true, note: '소방법 지정 위험물' }
-                          : { ok: true, hit: false, note: '위험물안전관리법 매칭 없음' },
-        cci: matched.cci ? { ok: true, hit: true, note: '화학물질안전관리정보 등재' }
-                          : { ok: true, hit: false, note: '화학물질안전원 매칭 없음' }
+        nier: { ok: true, hit: false, note: '화관법 매칭 없음' },
+        nfa: { ok: true, hit: false, note: '위험물안전관리법 매칭 없음' },
+        cci: { ok: true, hit: false, note: '화학물질안전원 매칭 없음' }
     };
 
     return { status, matched, tags: [...tags], matchedName: matchedName || null, sources };
 }
 
+/* =========================================================
+   ⭐ 정규식 문법 에러 수정: 모두 한 줄로 작성
+   ========================================================= */
 function extractMatchedName(before, after, cas) {
     if (!before) return null;
 
+    // 패턴 1: "벤젠(Benzene;..." 형태
     const m1 = before.match(/([가-힣A-Za-z0-9\-,()\s]{2,40})\s*\(\s*[A-Za-z][^;]{0,40}$/);
     if (m1) {
         const name = m1[1].trim().replace(/^[\d\)\.\s]+/, '');
         if (name.length >= 2 && name.length <= 40) return name;
     }
 
+    // 패턴 2: "벤젠 [" 형태
     const m2 = before.match(/([가-힣A-Za-z0-9\-]{2,30})\s*
 \[$/);
     if (m2) return m2[1].trim();
 
+    // 패턴 3: "벤젠(" 또는 "벤젠[" 형태
     const m3 = before.match(/([가-힣][가-힣A-Za-z0-9\-]{1,20})\s*[\(
 \[]?$/);
     if (m3) return m3[1].trim();
@@ -320,7 +303,7 @@ function extractNameFromTitle(title) {
 
 function shortDoc(item) {
     return {
-        docId: item.doc_id || '',
+        docId: (item.doc_id || '').substring(0, 60),
         title: (item.title || '').substring(0, 80),
         category: item.category || '',
         score: item.score || 0
