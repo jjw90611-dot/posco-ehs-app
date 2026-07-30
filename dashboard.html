@@ -4,109 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>포스코퓨처엠 - 통합안전 메인 대시보드</title>
-    <!-- Tailwind CSS & FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        .risk-high { background: linear-gradient(135deg,#fee2e2,#fecaca); border-left-color:#dc2626; }
+        details[open] summary .fa-chevron-down { transform: rotate(180deg); }
+        summary { list-style: none; cursor: pointer; }
+        summary::-webkit-details-marker { display: none; }
+    </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-gray-800">
 
-    <!-- 상단 네비게이션 바 -->
+    <!-- 상단 네비게이션 -->
     <nav class="bg-[#00529C] text-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <!-- 로고 영역 -->
                 <div class="flex items-center space-x-3 cursor-pointer" onclick="location.href='dashboard.html'">
                     <i class="fa-solid fa-shield-halved text-2xl text-blue-300"></i>
                     <span class="font-black text-xl tracking-wider">POSCO <span class="font-light">FUTURE M</span></span>
                     <span class="bg-blue-800 text-xs px-2.5 py-1 rounded-full font-medium">EHS Portal</span>
                 </div>
-
-                <!-- 사용자 프로필 및 로그아웃 -->
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-3">
+                    <button onclick="toggleAdminMode()" id="adminBtn" class="bg-amber-500 hover:bg-amber-600 text-xs font-bold px-3 py-2 rounded-lg transition flex items-center space-x-1">
+                        <i class="fa-solid fa-user-shield"></i><span id="adminBtnText">관리자 모드</span>
+                    </button>
                     <div class="text-right hidden sm:block">
                         <p class="text-sm font-bold">홍길동 안전관리자</p>
                         <p class="text-xs text-blue-200">광양 양극재 생산기술그룹</p>
                     </div>
                     <a href="index.html" class="bg-blue-800 hover:bg-blue-900 text-xs font-semibold px-3 py-2 rounded-lg border border-blue-600 transition flex items-center space-x-1">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>로그아웃</span>
+                        <i class="fa-solid fa-right-from-bracket"></i><span>로그아웃</span>
                     </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 메인 컨텐츠 영역 -->
+    <!-- 관리자 패널 (기본 숨김) -->
+    <section id="adminPanel" class="hidden bg-amber-50 border-b-2 border-amber-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-4">
+            <h2 class="text-base font-black text-amber-900 flex items-center gap-2">
+                <i class="fa-solid fa-user-shield"></i>관리자 설정
+            </h2>
+
+            <!-- 무재해 시작일 -->
+            <div class="bg-white rounded-lg p-4 border border-amber-200 flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">무재해 달성 시작일</label>
+                    <input type="date" id="noAccidentStart" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                </div>
+                <button onclick="saveNoAccidentDate()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded text-sm">
+                    <i class="fa-solid fa-save mr-1"></i>저장
+                </button>
+                <p class="text-xs text-gray-500 ml-2">※ 오늘 날짜와 자동으로 일수 계산됩니다</p>
+            </div>
+
+            <!-- 엑셀 붙여넣기 -->
+            <div class="bg-white rounded-lg p-4 border border-amber-200">
+                <label class="block text-xs font-bold text-gray-600 mb-2">
+                    <i class="fa-solid fa-table mr-1"></i>D-안전회의 엑셀 데이터 붙여넣기
+                </label>
+                <p class="text-[11px] text-gray-500 mb-2">
+                    엑셀에서 <b>데이터 행만</b> 복사(Ctrl+C) → 아래 붙여넣기(Ctrl+V) → [파싱 & 반영] 클릭<br>
+                    ※ 헤더 행 제외, 일자~CCTV까지 30개 컬럼
+                </p>
+                <textarea id="excelPaste" rows="6" placeholder="7/31&#9;1&#9;X&#9;포스코투자엔지니어링실&#9;2열연4가열로&#9;..." 
+                    class="w-full border border-gray-300 rounded px-3 py-2 text-xs font-mono resize-y focus:outline-none focus:border-amber-500"></textarea>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button onclick="parseAndApply()" class="bg-[#00529C] hover:bg-blue-900 text-white font-bold px-4 py-2 rounded text-sm">
+                        <i class="fa-solid fa-play mr-1"></i>파싱 & 반영
+                    </button>
+                    <button onclick="clearWorkData()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold px-4 py-2 rounded text-sm">
+                        <i class="fa-solid fa-trash mr-1"></i>작업 데이터 초기화
+                    </button>
+                    <button onclick="exportJSON()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded text-sm">
+                        <i class="fa-solid fa-download mr-1"></i>JSON 내보내기
+                    </button>
+                    <label class="bg-slate-600 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded text-sm cursor-pointer">
+                        <i class="fa-solid fa-upload mr-1"></i>JSON 불러오기
+                        <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+                    </label>
+                    <span id="parseResult" class="ml-2 self-center text-sm font-bold"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 메인 -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        <!-- 1. 무재해 달성 및 주요 안전 현황 KPI 카드 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-            <!-- 무재해 일수 -->
-            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-emerald-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-500 uppercase">사업장 무재해 달성</p>
-                    <p class="text-3xl font-black text-emerald-600 mt-1">365<span class="text-lg font-bold text-gray-600"> 일</span></p>
-                </div>
-                <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-xl">
-                    <i class="fa-solid fa-trophy"></i>
+        <!-- KPI 카드 6개 -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <!-- 무재해 -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500">
+                <p class="text-[11px] font-bold text-gray-500 uppercase">무재해 달성</p>
+                <p class="text-2xl font-black text-emerald-600 mt-1"><span id="kpiNoAccident">-</span><span class="text-sm text-gray-600"> 일</span></p>
+                <p class="text-[10px] text-gray-400 mt-0.5" id="kpiNoAccidentSince">시작일 미설정</p>
+            </div>
+            <!-- 금일 작업 -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-[#00529C]">
+                <p class="text-[11px] font-bold text-gray-500 uppercase">금일 작업 현황</p>
+                <p class="text-2xl font-black text-[#00529C] mt-1"><span id="kpiTotalWork">0</span><span class="text-sm text-gray-600"> 건</span></p>
+                <p class="text-[10px] text-gray-400 mt-0.5"><span id="kpiWorkDate">-</span></p>
+            </div>
+            <!-- 고위험 -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-rose-500">
+                <p class="text-[11px] font-bold text-gray-500 uppercase">고위험 작업</p>
+                <p class="text-2xl font-black text-rose-600 mt-1"><span id="kpiHighRisk">0</span><span class="text-sm text-gray-600"> 건</span></p>
+                <p class="text-[10px] text-gray-400 mt-0.5"><span id="kpiHighRiskPct">0</span>% 비중</p>
+            </div>
+            <!-- 총 인원 -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-indigo-500">
+                <p class="text-[11px] font-bold text-gray-500 uppercase">총 작업인원</p>
+                <p class="text-2xl font-black text-indigo-600 mt-1"><span id="kpiTotalPeople">0</span><span class="text-sm text-gray-600"> 명</span></p>
+                <p class="text-[10px] text-gray-400 mt-0.5"><span id="kpiVendorCount">0</span>개 용역사</p>
+            </div>
+            <!-- MSDS -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-teal-500">
+                <p class="text-[11px] font-bold text-gray-500 uppercase">등록 MSDS</p>
+                <p class="text-2xl font-black text-teal-600 mt-1"><span id="kpiMsds">-</span><span class="text-sm text-gray-600"> 종</span></p>
+                <p class="text-[10px] text-rose-500 font-semibold mt-0.5">특별관리 <span id="kpiMsdsSpecial">-</span>종</p>
+            </div>
+            <!-- CCTV 미설치 -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500">
+                <p class="text-[11px] font-bold text-gray-500 uppercase">CCTV 미설치</p>
+                <p class="text-2xl font-black text-amber-600 mt-1"><span id="kpiNoCctv">0</span><span class="text-sm text-gray-600"> 건</span></p>
+                <p class="text-[10px] text-gray-400 mt-0.5">모니터링 사각지대</p>
+            </div>
+        </div>
+
+        <!-- 잠재위험 & 공사현장별 인원 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- 잠재위험 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="text-sm font-black text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>잠재위험 요약
+                </h3>
+                <div class="grid grid-cols-5 gap-2" id="riskSummary">
+                    <div class="text-center p-2 bg-rose-50 rounded"><i class="fa-solid fa-fire text-rose-500"></i><p class="text-[10px] text-gray-600 mt-1">화재</p><p class="font-black text-rose-600" id="riskFire">0</p></div>
+                    <div class="text-center p-2 bg-orange-50 rounded"><i class="fa-solid fa-bomb text-orange-500"></i><p class="text-[10px] text-gray-600 mt-1">폭발</p><p class="font-black text-orange-600" id="riskExplode">0</p></div>
+                    <div class="text-center p-2 bg-purple-50 rounded"><i class="fa-solid fa-mask-ventilator text-purple-500"></i><p class="text-[10px] text-gray-600 mt-1">질식</p><p class="font-black text-purple-600" id="riskSuffocate">0</p></div>
+                    <div class="text-center p-2 bg-teal-50 rounded"><i class="fa-solid fa-droplet text-teal-500"></i><p class="text-[10px] text-gray-600 mt-1">누출</p><p class="font-black text-teal-600" id="riskLeak">0</p></div>
+                    <div class="text-center p-2 bg-slate-50 rounded"><i class="fa-solid fa-circle-exclamation text-slate-500"></i><p class="text-[10px] text-gray-600 mt-1">기타</p><p class="font-black text-slate-600" id="riskEtc">0</p></div>
                 </div>
             </div>
 
-            <!-- 금일 위험작업 허가(PTW) -->
-            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-500 uppercase">금일 작업허가서(PTW)</p>
-                    <p class="text-3xl font-black text-amber-600 mt-1">12<span class="text-lg font-bold text-gray-600"> 건 진행중</span></p>
-                </div>
-                <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 text-xl">
-                    <i class="fa-solid fa-file-signature"></i>
-                </div>
-            </div>
-
-            <!-- 밀폐공간 작업 현황 -->
-            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-500 uppercase">밀폐공간 출입 현황</p>
-                    <p class="text-3xl font-black text-blue-600 mt-1">3<span class="text-lg font-bold text-gray-600"> 개소 작업중</span></p>
-                </div>
-                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xl">
-                    <i class="fa-solid fa-mask-ventilator"></i>
-                </div>
-            </div>
-
-            <!-- ★ 신규: MSDS 취급 화학물질 KPI -->
-            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-teal-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-500 uppercase">등록 MSDS / 특별관리</p>
-                    <p class="text-3xl font-black text-teal-600 mt-1">1,284<span class="text-lg font-bold text-gray-600"> 종</span></p>
-                    <p class="text-[11px] text-rose-500 font-semibold mt-0.5">특별관리물질 37종 포함</p>
-                </div>
-                <div class="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 text-xl">
-                    <i class="fa-solid fa-flask-vial"></i>
-                </div>
-            </div>
-
-            <!-- TBM 실시율 -->
-            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-indigo-500 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-gray-500 uppercase">금일 TBM 실시율</p>
-                    <p class="text-3xl font-black text-indigo-600 mt-1">100<span class="text-lg font-bold text-gray-600"> %</span></p>
-                </div>
-                <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-xl">
-                    <i class="fa-solid fa-users-gear"></i>
+            <!-- 공사현장별 인원 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="text-sm font-black text-gray-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-hard-hat text-[#00529C]"></i>공사현장별 인원
+                </h3>
+                <div id="siteHeadcount" class="space-y-1.5 max-h-40 overflow-y-auto">
+                    <p class="text-xs text-gray-400 text-center py-4">데이터 없음</p>
                 </div>
             </div>
         </div>
 
-        <!-- 2. 주요 핵심 메뉴 바로가기 -->
+        <!-- 작업 현황 리스트 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-list text-[#00529C]"></i>금일 작업 상세 현황
+                </h3>
+                <div class="flex items-center gap-2">
+                    <select id="filterRisk" onchange="renderWorkList()" class="text-xs border border-gray-300 rounded px-2 py-1">
+                        <option value="all">전체</option>
+                        <option value="high">고위험만</option>
+                        <option value="normal">일반만</option>
+                    </select>
+                    <input type="text" id="filterKeyword" oninput="renderWorkList()" placeholder="🔍 부서/장소/담당자 검색" class="text-xs border border-gray-300 rounded px-2 py-1 w-56">
+                </div>
+            </div>
+            <div id="workList" class="space-y-3">
+                <p class="text-sm text-gray-400 text-center py-8">
+                    <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
+                    작업 데이터가 없습니다. <b>관리자 모드</b>에서 엑셀 데이터를 붙여넣으세요.
+                </p>
+            </div>
+        </div>
+
+        <!-- 안전관리 핵심 솔루션 (기존 유지) -->
         <div>
             <h2 class="text-lg font-black text-gray-800 mb-4 flex items-center space-x-2">
                 <i class="fa-solid fa-layer-group text-[#00529C]"></i>
                 <span>안전관리 핵심 솔루션</span>
             </h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                
-                <!-- 메뉴 1: 밀폐공간 안전관리 -->
                 <a href="confined-space.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#00529C] transition group cursor-pointer">
                     <div class="w-12 h-12 bg-blue-50 text-[#00529C] rounded-lg flex items-center justify-center text-2xl group-hover:bg-[#00529C] group-hover:text-white transition">
                         <i class="fa-solid fa-door-closed"></i>
@@ -114,10 +199,7 @@
                     <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-[#00529C]">밀폐공간 안전관리</h3>
                     <p class="text-xs text-gray-500 mt-1">산소/유해가스 농도 측정 기록, 작업 허가서 작성 및 실시간 모니터링</p>
                 </a>
-
-                <!-- ★ 신규 메뉴 2: MSDS 보건관리 (밀폐공간 바로 아래 위치) -->
                 <a href="msds-management.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-teal-600 transition group cursor-pointer relative">
-                    <!-- 미처리 알림 배지 (측정만료+재검진 대상) -->
                     <span class="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse" title="측정만료 8건, 특수건강진단 대상 15건">23</span>
                     <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-teal-600 group-hover:text-white transition">
                         <i class="fa-solid fa-flask-vial"></i>
@@ -125,8 +207,6 @@
                     <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-teal-600">MSDS 보건관리</h3>
                     <p class="text-xs text-gray-500 mt-1">화학물질 MSDS 등록·법규 자동분석, 경고표지·관리요령, 작업환경측정 및 특수건강진단 연계</p>
                 </a>
-
-                <!-- 메뉴 3: 안전보건 법적 기준 조회 -->
                 <a href="laws.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-600 transition group cursor-pointer">
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-emerald-600 group-hover:text-white transition">
                         <i class="fa-solid fa-scale-balanced"></i>
@@ -134,8 +214,6 @@
                     <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-emerald-600">안전보건 법령·지침 검색</h3>
                     <p class="text-xs text-gray-500 mt-1">중대재해처벌법, 산업안전보건법 및 포스코퓨처엠 안전 표준 가이드</p>
                 </a>
-
-                <!-- 메뉴 4: 위험성평가(JSA) -->
                 <a href="risk-assessment.html" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-500 transition group cursor-pointer relative">
                     <span class="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse" title="예정일경과 3건, 승인대기 8건">11</span>
                     <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-purple-600 group-hover:text-white transition">
@@ -144,8 +222,6 @@
                     <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-purple-600">위험성평가 (JSA)</h3>
                     <p class="text-xs text-gray-500 mt-1">작업표준 기반 위험요인 도출·위험도 산정 및 개선대책 수립 관리</p>
                 </a>
-
-                <!-- 메뉴 5: 안전점검 및 아차사고 -->
                 <a href="#" class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-rose-600 transition group cursor-pointer">
                     <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-lg flex items-center justify-center text-2xl group-hover:bg-rose-600 group-hover:text-white transition">
                         <i class="fa-solid fa-bullhorn"></i>
@@ -153,59 +229,384 @@
                     <h3 class="text-base font-bold text-gray-900 mt-4 group-hover:text-rose-600">아차사고 / 불안전요인 신고</h3>
                     <p class="text-xs text-gray-500 mt-1">현장 불안전 상태 촬영 및 즉시 개선 조치 요청</p>
                 </a>
-
             </div>
         </div>
-
-        <!-- 3. 실시간 안전 전달사항 및 최근 공지 -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-base font-bold text-gray-900 flex items-center space-x-2">
-                    <i class="fa-solid fa-bell text-amber-500"></i>
-                    <span>EHS 안전보건 최근 공지</span>
-                </h2>
-                <span class="text-xs text-gray-400">최근 업데이트: 오늘 08:30</span>
-            </div>
-            <ul class="divide-y divide-gray-100 text-sm">
-                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
-                    <div class="flex items-center space-x-3">
-                        <span class="bg-rose-100 text-rose-700 text-xs font-bold px-2 py-0.5 rounded">중요</span>
-                        <span class="font-medium text-gray-800">[필수] 하절기 폭염 대비 온열질환 예방 수칙 준수의 건</span>
-                    </div>
-                    <span class="text-xs text-gray-400">2024.05.20</span>
-                </li>
-                <!-- ★ 신규: MSDS 관련 공지 추가 -->
-                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
-                    <div class="flex items-center space-x-3">
-                        <span class="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-0.5 rounded">MSDS</span>
-                        <span class="font-medium text-gray-800">2024년 상반기 작업환경측정 결과 통보 및 특수건강진단 대상자 안내</span>
-                    </div>
-                    <span class="text-xs text-gray-400">2024.05.20</span>
-                </li>
-                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
-                    <div class="flex items-center space-x-3">
-                        <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-0.5 rounded">평가</span>
-                        <span class="font-medium text-gray-800">2024년 정기 위험성평가 실시 계획 안내 (5.1 ~ 6.30)</span>
-                    </div>
-                    <span class="text-xs text-gray-400">2024.05.19</span>
-                </li>
-                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
-                    <div class="flex items-center space-x-3">
-                        <span class="bg-blue-100 text-[#00529C] text-xs font-bold px-2 py-0.5 rounded">공지</span>
-                        <span class="font-medium text-gray-800">양극재 2공장 밀폐공간 가스검지기 정기 교정 실시 안내</span>
-                    </div>
-                    <span class="text-xs text-gray-400">2024.05.18</span>
-                </li>
-                <li class="py-3 flex items-center justify-between hover:bg-slate-50 px-2 rounded transition">
-                    <div class="flex items-center space-x-3">
-                        <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded">점검</span>
-                        <span class="font-medium text-gray-800">5월 특별 안전보건 점검 결과 및 우수 부서 포상</span>
-                    </div>
-                    <span class="text-xs text-gray-400">2024.05.15</span>
-                </li>
-            </ul>
-        </div>
-
     </main>
+
+    <script>
+    /* =========================================================
+       상태 관리
+       ========================================================= */
+    const STORAGE_KEYS = {
+        noAccident: 'pfm_no_accident_start',
+        workData:   'pfm_work_data',
+        adminMode:  'pfm_admin_mode'
+    };
+    let WORK_DATA = [];
+
+    /* =========================================================
+       관리자 모드
+       ========================================================= */
+    function toggleAdminMode(){
+        const panel = document.getElementById('adminPanel');
+        const isOpen = !panel.classList.contains('hidden');
+        if(isOpen){
+            panel.classList.add('hidden');
+            document.getElementById('adminBtnText').textContent = '관리자 모드';
+            localStorage.setItem(STORAGE_KEYS.adminMode, '0');
+        } else {
+            panel.classList.remove('hidden');
+            document.getElementById('adminBtnText').textContent = '관리자 모드 종료';
+            localStorage.setItem(STORAGE_KEYS.adminMode, '1');
+        }
+    }
+
+    /* =========================================================
+       무재해 일수 계산
+       ========================================================= */
+    function saveNoAccidentDate(){
+        const val = document.getElementById('noAccidentStart').value;
+        if(!val){ alert('시작일을 선택하세요'); return; }
+        localStorage.setItem(STORAGE_KEYS.noAccident, val);
+        updateNoAccidentKPI();
+        alert('✅ 무재해 시작일 저장 완료');
+    }
+
+    function updateNoAccidentKPI(){
+        const start = localStorage.getItem(STORAGE_KEYS.noAccident);
+        if(!start){
+            document.getElementById('kpiNoAccident').textContent = '-';
+            document.getElementById('kpiNoAccidentSince').textContent = '시작일 미설정';
+            return;
+        }
+        document.getElementById('noAccidentStart').value = start;
+        const d1 = new Date(start);
+        const d2 = new Date();
+        const days = Math.floor((d2 - d1) / 86400000) + 1;
+        document.getElementById('kpiNoAccident').textContent = days.toLocaleString();
+        document.getElementById('kpiNoAccidentSince').textContent = `${start} ~`;
+    }
+
+    /* =========================================================
+       엑셀 파싱 (탭 구분자 기준)
+       컬럼 순서:
+       0:일자 1:NO 2:고위험 3:운전부서(부서) 4:운전부서(공장)
+       5:작업지시부서 6:작업장소 7:작업명 8:인원 9:작업시간
+       10:용역사 11:하도급용역사 12:포스코현장소장 13:용역사현장소장
+       14:잠재위험 15:조치사항 16:가동상태 17:실장결재(수리) 18:소장결재(점검)
+       19:화재 20:폭발 21:질식 22:누출 23:기타
+       24:실장결재 25:부식개소출입 26:부장결재
+       27:안전관리자소속 28:안전관리자이름 29:CCTV
+       ========================================================= */
+    function parseAndApply(){
+        const raw = document.getElementById('excelPaste').value.trim();
+        const resultEl = document.getElementById('parseResult');
+        if(!raw){
+            resultEl.textContent = '❌ 데이터가 비어있습니다';
+            resultEl.className = 'ml-2 self-center text-sm font-bold text-rose-600';
+            return;
+        }
+
+        const lines = raw.split(/\r?\n/).filter(l=>l.trim());
+        const parsed = [];
+        let skip = 0;
+
+        lines.forEach((line, idx)=>{
+            const cells = line.split('\t');
+            // 최소 컬럼 검증 (일자~인원까지는 있어야)
+            if(cells.length < 10){ skip++; return; }
+            // 첫 셀이 헤더 문자열이면 skip
+            if(cells[0].includes('일자') || cells[0].includes('NO')) { skip++; return; }
+
+            parsed.push({
+                id: 'w'+Date.now()+'_'+idx,
+                date:       cells[0]?.trim() || '',
+                no:         cells[1]?.trim() || '',
+                highRisk:   (cells[2]||'').trim().toUpperCase() === 'O',
+                deptOwner:  cells[3]?.trim() || '',    // 운전부서(부서)
+                factory:    cells[4]?.trim() || '',    // 운전부서(공장)
+                orderDept:  cells[5]?.trim() || '',    // 작업지시부서
+                location:   cells[6]?.trim() || '',    // 작업장소
+                workName:   cells[7]?.trim() || '',    // 작업명
+                people:     parseInt(cells[8])||0,
+                time:       cells[9]?.trim() || '',
+                vendor:     cells[10]?.trim() || '',   // 용역사
+                subVendor:  cells[11]?.trim() || '',   // 하도급 용역사
+                pfmSiteMgr: cells[12]?.trim() || '',   // 포스코퓨처엠 현장소장
+                vendorSiteMgr: cells[13]?.trim() || '',// 용역사 현장소장
+                hazard:     cells[14]?.trim() || '',
+                action:     cells[15]?.trim() || '',
+                opStatus:   cells[16]?.trim() || '',
+                signMgr1:   (cells[17]||'').trim().toUpperCase() === 'O',
+                signSiteMgr:(cells[18]||'').trim().toUpperCase() === 'O',
+                fire:       (cells[19]||'').trim().toUpperCase() === 'O',
+                explode:    (cells[20]||'').trim().toUpperCase() === 'O',
+                suffocate:  (cells[21]||'').trim().toUpperCase() === 'O',
+                leak:       (cells[22]||'').trim().toUpperCase() === 'O',
+                etcRisk:    (cells[23]||'').trim().toUpperCase() === 'O',
+                signMgr2:   (cells[24]||'').trim().toUpperCase() === 'O',
+                corrosion:  (cells[25]||'').trim().toUpperCase() === 'O',
+                signHead:   (cells[26]||'').trim().toUpperCase() === 'O',
+                safetyMgrDept: cells[27]?.trim() || '', // 안전관리자 소속(플랜트공사그룹)
+                safetyMgrName: cells[28]?.trim() || '', // 안전관리자 이름
+                cctv:       (cells[29]||'').trim().toUpperCase() === 'O'
+            });
+        });
+
+        if(parsed.length === 0){
+            resultEl.textContent = '❌ 유효한 데이터가 없습니다';
+            resultEl.className = 'ml-2 self-center text-sm font-bold text-rose-600';
+            return;
+        }
+
+        WORK_DATA = parsed;
+        localStorage.setItem(STORAGE_KEYS.workData, JSON.stringify(WORK_DATA));
+        resultEl.textContent = `✅ ${parsed.length}건 반영 완료${skip?` (${skip}행 건너뜀)`:''}`;
+        resultEl.className = 'ml-2 self-center text-sm font-bold text-emerald-600';
+        renderAll();
+    }
+
+    function clearWorkData(){
+        if(!confirm('작업 데이터를 모두 삭제하시겠습니까?')) return;
+        WORK_DATA = [];
+        localStorage.removeItem(STORAGE_KEYS.workData);
+        document.getElementById('excelPaste').value = '';
+        document.getElementById('parseResult').textContent = '';
+        renderAll();
+    }
+
+    function exportJSON(){
+        const data = {
+            noAccidentStart: localStorage.getItem(STORAGE_KEYS.noAccident),
+            workData: WORK_DATA,
+            exportedAt: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ehs_dashboard_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importJSON(evt){
+        const file = evt.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = e=>{
+            try{
+                const data = JSON.parse(e.target.result);
+                if(data.noAccidentStart) localStorage.setItem(STORAGE_KEYS.noAccident, data.noAccidentStart);
+                if(data.workData){
+                    WORK_DATA = data.workData;
+                    localStorage.setItem(STORAGE_KEYS.workData, JSON.stringify(WORK_DATA));
+                }
+                renderAll();
+                alert('✅ 데이터 불러오기 완료');
+            }catch(err){
+                alert('❌ 파일 파싱 실패: '+err.message);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    /* =========================================================
+       KPI 갱신
+       ========================================================= */
+    function updateKPI(){
+        const total = WORK_DATA.length;
+        const high = WORK_DATA.filter(w=>w.highRisk).length;
+        const people = WORK_DATA.reduce((s,w)=>s+(w.people||0),0);
+        const vendors = new Set(WORK_DATA.map(w=>w.vendor).filter(v=>v && v!=='없음')).size;
+        const noCctv = WORK_DATA.filter(w=>!w.cctv).length;
+        const dates = [...new Set(WORK_DATA.map(w=>w.date).filter(Boolean))];
+
+        document.getElementById('kpiTotalWork').textContent = total;
+        document.getElementById('kpiHighRisk').textContent = high;
+        document.getElementById('kpiHighRiskPct').textContent = total ? Math.round(high/total*100) : 0;
+        document.getElementById('kpiTotalPeople').textContent = people.toLocaleString();
+        document.getElementById('kpiVendorCount').textContent = vendors;
+        document.getElementById('kpiNoCctv').textContent = noCctv;
+        document.getElementById('kpiWorkDate').textContent = dates.length ? dates.join(', ') : '-';
+
+        // 잠재위험
+        document.getElementById('riskFire').textContent = WORK_DATA.filter(w=>w.fire).length;
+        document.getElementById('riskExplode').textContent = WORK_DATA.filter(w=>w.explode).length;
+        document.getElementById('riskSuffocate').textContent = WORK_DATA.filter(w=>w.suffocate).length;
+        document.getElementById('riskLeak').textContent = WORK_DATA.filter(w=>w.leak).length;
+        document.getElementById('riskEtc').textContent = WORK_DATA.filter(w=>w.etcRisk).length;
+
+        // MSDS는 임시 하드코딩(추후 msds-management.html의 localStorage와 연동 가능)
+        try{
+            const msdsRaw = localStorage.getItem('MATERIALS');
+            if(msdsRaw){
+                const mats = JSON.parse(msdsRaw);
+                document.getElementById('kpiMsds').textContent = mats.length.toLocaleString();
+                document.getElementById('kpiMsdsSpecial').textContent = mats.filter(m=>m.isSpecial).length;
+            } else {
+                document.getElementById('kpiMsds').textContent = '0';
+                document.getElementById('kpiMsdsSpecial').textContent = '0';
+            }
+        }catch(e){
+            document.getElementById('kpiMsds').textContent = '-';
+            document.getElementById('kpiMsdsSpecial').textContent = '-';
+        }
+    }
+
+    /* =========================================================
+       공사현장별 인원
+       ========================================================= */
+    function renderSiteHeadcount(){
+        const box = document.getElementById('siteHeadcount');
+        if(WORK_DATA.length === 0){
+            box.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">데이터 없음</p>';
+            return;
+        }
+        // factory(공장) 기준 그룹핑
+        const grp = {};
+        WORK_DATA.forEach(w=>{
+            const key = w.factory || w.location || '기타';
+            if(!grp[key]) grp[key] = { people:0, works:0 };
+            grp[key].people += w.people||0;
+            grp[key].works += 1;
+        });
+        const sorted = Object.entries(grp).sort((a,b)=>b[1].people-a[1].people);
+        const maxPeople = sorted[0]?.[1].people || 1;
+
+        box.innerHTML = sorted.map(([site,info])=>{
+            const pct = Math.round(info.people/maxPeople*100);
+            return `
+            <div class="flex items-center gap-2 text-xs">
+                <span class="w-32 truncate font-semibold text-gray-700" title="${site}">${site}</span>
+                <div class="flex-1 bg-slate-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-[#00529C] h-full rounded-full" style="width:${pct}%"></div>
+                </div>
+                <span class="font-bold text-[#00529C] w-16 text-right">${info.people}명</span>
+                <span class="text-gray-400 w-10 text-right">${info.works}건</span>
+            </div>`;
+        }).join('');
+    }
+
+    /* =========================================================
+       작업 리스트 렌더링
+       ========================================================= */
+    function renderWorkList(){
+        const list = document.getElementById('workList');
+        const filterRisk = document.getElementById('filterRisk').value;
+        const keyword = document.getElementById('filterKeyword').value.trim().toLowerCase();
+
+        let filtered = WORK_DATA;
+        if(filterRisk==='high') filtered = filtered.filter(w=>w.highRisk);
+        if(filterRisk==='normal') filtered = filtered.filter(w=>!w.highRisk);
+        if(keyword){
+            filtered = filtered.filter(w=>
+                (w.deptOwner+w.factory+w.location+w.workName+w.pfmSiteMgr+w.vendorSiteMgr+w.vendor+w.safetyMgrName).toLowerCase().includes(keyword)
+            );
+        }
+
+        if(filtered.length === 0){
+            list.innerHTML = `
+                <p class="text-sm text-gray-400 text-center py-8">
+                    <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
+                    ${WORK_DATA.length===0 ? '작업 데이터가 없습니다. <b>관리자 모드</b>에서 엑셀 데이터를 붙여넣으세요.' : '검색 결과가 없습니다.'}
+                </p>`;
+            return;
+        }
+
+        list.innerHTML = filtered.map(w=>{
+            const risks = [];
+            if(w.fire) risks.push('<span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded">🔥 화재</span>');
+            if(w.explode) risks.push('<span class="bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded">💥 폭발</span>');
+            if(w.suffocate) risks.push('<span class="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded">😷 질식</span>');
+            if(w.leak) risks.push('<span class="bg-teal-100 text-teal-700 text-[10px] font-bold px-1.5 py-0.5 rounded">💧 누출</span>');
+            if(w.etcRisk) risks.push('<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">⚠ 기타</span>');
+            if(w.corrosion) risks.push('<span class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-1.5 py-0.5 rounded">🧪 부식개소</span>');
+
+            return `
+            <details class="border ${w.highRisk?'border-rose-200 bg-rose-50/30':'border-gray-200 bg-white'} rounded-lg">
+                <summary class="p-4">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                ${w.highRisk ? '<span class="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">⚠ 고위험</span>' : '<span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">일반</span>'}
+                                <span class="text-[11px] text-gray-500">${w.date} · NO.${w.no}</span>
+                                <span class="text-[11px] text-gray-500">📍 ${w.factory||w.location}</span>
+                                ${!w.cctv ? '<span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded">📹 CCTV없음</span>' : ''}
+                            </div>
+                            <p class="text-sm font-black text-gray-900 truncate">${escapeHtml(w.workName)}</p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-600 mt-1.5">
+                                <span><i class="fa-solid fa-building mr-1 text-gray-400"></i>${w.deptOwner}</span>
+                                <span><i class="fa-solid fa-users mr-1 text-gray-400"></i>${w.people}명</span>
+                                <span><i class="fa-solid fa-clock mr-1 text-gray-400"></i>${w.time}</span>
+                                <span><i class="fa-solid fa-handshake mr-1 text-gray-400"></i>용역사: <b>${w.vendor}</b></span>
+                            </div>
+                            <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-600 mt-0.5">
+                                <span>🏢 포스코 현장소장: <b>${w.pfmSiteMgr||'-'}</b></span>
+                                <span>👷 용역사 현장소장: <b>${w.vendorSiteMgr||'-'}</b></span>
+                                <span>🛡 안전관리자: <b>${w.safetyMgrName||'-'}</b> <span class="text-gray-400">(${w.safetyMgrDept||'-'})</span></span>
+                            </div>
+                            ${risks.length ? `<div class="flex flex-wrap gap-1 mt-2">${risks.join('')}</div>` : ''}
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 mt-1 transition-transform"></i>
+                    </div>
+                </summary>
+                <div class="border-t border-gray-200 p-4 bg-slate-50 space-y-3">
+                    ${w.hazard ? `
+                    <div>
+                        <p class="text-[11px] font-black text-rose-700 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>잠재위험</p>
+                        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${escapeHtml(w.hazard)}</pre>
+                    </div>` : ''}
+                    ${w.action ? `
+                    <div>
+                        <p class="text-[11px] font-black text-emerald-700 mb-1"><i class="fa-solid fa-shield-halved mr-1"></i>안전 조치사항</p>
+                        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${escapeHtml(w.action)}</pre>
+                    </div>` : ''}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+                        <div class="bg-white rounded p-2 border"><b>가동상태:</b> ${w.opStatus||'-'}</div>
+                        <div class="bg-white rounded p-2 border"><b>실장결재(수리):</b> ${w.signMgr1?'✅':'❌'}</div>
+                        <div class="bg-white rounded p-2 border"><b>소장결재(점검):</b> ${w.signSiteMgr?'✅':'❌'}</div>
+                        <div class="bg-white rounded p-2 border"><b>부장결재(부식):</b> ${w.signHead?'✅':'—'}</div>
+                    </div>
+                </div>
+            </details>`;
+        }).join('');
+    }
+
+    function escapeHtml(s){
+        return String(s||'').replace(/[&<>"']/g, c=>({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    /* =========================================================
+       전체 렌더링
+       ========================================================= */
+    function renderAll(){
+        updateNoAccidentKPI();
+        updateKPI();
+        renderSiteHeadcount();
+        renderWorkList();
+    }
+
+    /* =========================================================
+       초기화
+       ========================================================= */
+    (function init(){
+        // 저장된 데이터 로드
+        try{
+            const saved = localStorage.getItem(STORAGE_KEYS.workData);
+            if(saved) WORK_DATA = JSON.parse(saved);
+        }catch(e){ WORK_DATA = []; }
+
+        // 관리자 모드 상태 복원
+        if(localStorage.getItem(STORAGE_KEYS.adminMode) === '1'){
+            document.getElementById('adminPanel').classList.remove('hidden');
+            document.getElementById('adminBtnText').textContent = '관리자 모드 종료';
+        }
+
+        renderAll();
+    })();
+    </script>
 </body>
 </html>
