@@ -1,31 +1,26 @@
 // functions/api/inspect/[cas].js
-// Cloudflare Pages Functions - CAS 기반 법규 통합 검수 프록시
-// v3: 문법 에러 수정 + 카테고리 축소 + 응답 크기 축소
+// KOSHA smartSearch API 프록시 (단일 소스, 최소 구조)
+// search.js 검증된 패턴 그대로 사용
 
-const KOSHA_API_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
-const KOSHA_BASE = "https://apis.data.go.kr/B552468/srch/smartSearch";
-
-// ⭐ 카테고리 축소: KOSHA Guide(7) 제외 (응답 크기 문제로 타임아웃 유발)
-const CATEGORIES = [
-    { id: 2, name: '산업안전보건법 시행령' },
-    { id: 4, name: '산업안전보건기준에 관한 규칙' }
-];
-
-const PER_CALL_TIMEOUT = 6000;
-const NUM_OF_ROWS = 30;
-
-/* =========================================================
-   메인 핸들러
-   ========================================================= */
 export async function onRequest(context) {
     const { params, request } = context;
     const url = new URL(request.url);
     const cas = (params.cas || '').trim();
-    const refresh = url.searchParams.get('refresh') === 'true';
-    const debug = url.searchParams.get('debug') === 'true';
 
+    // CORS Preflight
     if (request.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: corsHeaders() });
+        return new Response(null, { status: 204, headers: cors() });
+    }
+
+    // health 체크 (같은 라우트에서 처리)
+    if (cas === 'health') {
+        return json({
+            ok: true,
+            status: 'healthy',
+            proxy: 'running',
+            timestamp: new Date().toISOString(),
+            version: '5.0.0-minimal'
+        });
     }
 
     if (!cas) {
@@ -39,282 +34,135 @@ export async function onRequest(context) {
         }, 400);
     }
 
-    const diagnostics = [];
-    const startTs = Date.now();
-
-    try {
-        const searchPromises = CATEGORIES.map(cat =>
-            fetchKoshaByCategory(cas, cat.id, diagnostics)
-                .catch(e => {
-                    diagnostics.push({
-                        category: cat.id, name: cat.name,
-                        ok: false, error: e.message
-                    });
-                    return { category: cat.id, items: [], totalCount: 0 };
-                })
-        );
-
-        const results = await Promise.all(searchPromises);
-
-        const allItems = [];
-        let totalCount = 0;
-        results.forEach(r => {
-            if (r.items && r.items.length) allItems.push(...r.items);
-            totalCount += (r.totalCount || 0);
-        });
-
-        const inspection = analyzeItems(cas, allItems);
-        const elapsedMs = Date.now() - startTs;
-
-        const response = {
-            ok: true,
-            casNo: cas,
-            matchedName: inspection.matchedName,
-            status: inspection.status,
-            matched: inspection.matched,
-            tags: inspection.tags,
-            sources: inspection.sources,
-            meta: {
-                totalHits: totalCount,
-                analyzedItems: allItems.length,
-                categoriesSearched: CATEGORIES.length,
-                elapsedMs,
-                refresh
-            }
-        };
-
-        if (debug) response.diagnostics = diagnostics;
-        return json(response);
-
-    } catch (e) {
-        return json({
-            ok: false, casNo: cas,
-            error: e.message || '조회 실패',
-            diagnostics: debug ? diagnostics : undefined
-        }, 500);
-    }
-}
-
-/* =========================================================
-   KOSHA smartSearch API 호출
-   ========================================================= */
-async function fetchKoshaByCategory(cas, categoryId, diagnostics) {
-    const apiUrl = `${KOSHA_BASE}`
+    const KOSHA_API_KEY = "4b39abd89a4760da331813df65f3d422dbb86fca4ce6db701a0aa6919a49a9a4";
+    const apiUrl = `https://apis.data.go.kr/B552468/srch/smartSearch`
         + `?serviceKey=${encodeURIComponent(KOSHA_API_KEY)}`
         + `&pageNo=1`
-        + `&numOfRows=${NUM_OF_ROWS}`
+        + `&numOfRows=30`
         + `&searchValue=${encodeURIComponent(cas)}`
-        + `&category=${categoryId}`
+        + `&category=2`
         + `&type=json&_type=json`;
 
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), PER_CALL_TIMEOUT);
     const startTs = Date.now();
 
     try {
         const res = await fetch(apiUrl, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' },
-            signal: ctrl.signal
+            headers: { 'Accept': 'application/json' }
         });
-        clearTimeout(timeout);
-
-        const elapsedMs = Date.now() - startTs;
 
         if (!res.ok) {
-            diagnostics.push({ category: categoryId, ok: false, httpStatus: res.status, elapsedMs });
-            throw new Error(`HTTP ${res.status}`);
+            return json({
+                ok: false, casNo: cas,
+                error: `KOSHA API HTTP ${res.status}`
+            }, 502);
         }
 
         const text = await res.text();
 
         if (text.trim().startsWith('<')) {
-            diagnostics.push({
-                category: categoryId, ok: false,
-                error: 'XML 응답 (API키 문제 가능성)',
-                sample: text.substring(0, 200), elapsedMs
-            });
-            throw new Error('KOSHA API XML 에러');
+            return json({
+                ok: false, casNo: cas,
+                error: 'KOSHA API XML 에러 응답',
+                sample: text.substring(0, 200)
+            }, 502);
         }
 
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            diagnostics.push({
-                category: categoryId, ok: false,
-                error: 'JSON 파싱 실패',
-                sample: text.substring(0, 200), elapsedMs
-            });
-            throw new Error('JSON 파싱 실패');
-        }
-
-        const body = data?.response?.body || data?.body || {};
-        let items = body?.items?.item || body?.items || [];
+        const data = JSON.parse(text);
+        const body = data?.response?.body || {};
+        let items = body?.items?.item || [];
         if (!Array.isArray(items)) items = items ? [items] : [];
         const totalCount = Number(body?.totalCount || 0);
-        const resultCode = data?.response?.header?.resultCode;
 
-        diagnostics.push({
-            category: categoryId, ok: true, resultCode,
-            totalCount, itemsReturned: items.length, elapsedMs
+        // 매칭 판정
+        const result = analyze(cas, items);
+
+        return json({
+            ok: true,
+            casNo: cas,
+            matchedName: result.matchedName,
+            status: result.hit ? 'REGULATED' : 'NO_MATCH',
+            tags: result.tags,
+            docs: result.docs,
+            meta: {
+                totalHits: totalCount,
+                analyzedItems: items.length,
+                elapsedMs: Date.now() - startTs
+            }
         });
 
-        return { category: categoryId, items, totalCount };
-
     } catch (e) {
-        clearTimeout(timeout);
-        if (e.name === 'AbortError') {
-            throw new Error(`타임아웃 ${PER_CALL_TIMEOUT}ms 초과`);
-        }
-        throw e;
+        return json({
+            ok: false, casNo: cas,
+            error: e.message || '조회 실패'
+        }, 500);
     }
 }
 
 /* =========================================================
-   판정 로직
+   판정: KOSHA 문서 중 CAS를 실제 포함하는 것만 추림
    ========================================================= */
-function analyzeItems(cas, items) {
+function analyze(cas, items) {
     const tags = new Set();
-    const matched = { kosha: false, nier: false, nfa: false, cci: false };
-    const matchedDocs = { kosha: [] };
+    const docs = [];
     let matchedName = null;
-    let isSpecial = false;
+    let hit = false;
 
     for (const item of items) {
-        const content = (item.content || '').toString();
-        const docId = (item.doc_id || '').toString();
-        const title = (item.title || '').toString();
-        const keyword = (item.keyword || '').toString();
+        const content = String(item.content || '');
+        const title = String(item.title || '');
+        const docId = String(item.doc_id || '');
+        const highlight = String(item.highlight_content || '');
 
-        const hasBasicCas = content.includes(cas) || title.includes(cas) || keyword.includes(cas);
-        if (!hasBasicCas) continue;
-
-        if (docId.startsWith('KOSHA02') || docId.startsWith('KOSHA03') ||
-            docId.startsWith('KOSHA04') || docId.startsWith('KOSHA05')) {
-            matched.kosha = true;
-            matchedDocs.kosha.push(shortDoc(item));
+        // CAS가 실제로 포함되어야 매칭 인정
+        if (!content.includes(cas) && !title.includes(cas) && !highlight.includes(cas)) {
+            continue;
         }
 
-        const casIdx = content.indexOf(cas);
-        let before = '', after = '', nearText = '';
-        if (casIdx >= 0) {
-            before = content.substring(Math.max(0, casIdx - 100), casIdx);
-            after = content.substring(casIdx, Math.min(content.length, casIdx + 300));
-            nearText = before + after;
-        } else {
-            nearText = content;
-        }
+        hit = true;
+        docs.push({
+            docId: docId.substring(0, 60),
+            title: title.substring(0, 100),
+            score: item.score || 0
+        });
 
+        // 태그 추출
+        if (title.includes('제조') && title.includes('금지')) tags.add('제조금지');
+        if (title.includes('허가') && title.includes('대상')) tags.add('허가대상');
+        if (title.includes('허용기준') || title.includes('노출기준')) tags.add('노출기준');
+        if (title.includes('작업환경측정')) tags.add('작업환경측정');
+        if (title.includes('특수건강진단')) tags.add('특수건강진단');
+        if (title.includes('관리대상')) tags.add('관리대상');
+        if (content.includes('특별관리물질')) tags.add('특별관리물질');
+
+        // 물질명 추출 (CAS 앞의 한글명)
         if (!matchedName) {
-            matchedName = extractMatchedName(before, after, cas) || extractNameFromTitle(title);
-        }
-
-        if (nearText.includes('특별관리물질')) {
-            tags.add('특별관리');
-            isSpecial = true;
-        }
-        if (title.includes('작업환경측정') || docId.includes('별표 21') ||
-            content.includes('작업환경측정 대상 유해인자')) {
-            tags.add('작업환경측정');
-        }
-        if (title.includes('특수건강진단') || docId.includes('별표 22') ||
-            docId.includes('별표 23') || content.includes('특수건강진단 대상')) {
-            tags.add('특수건강진단');
-        }
-        if (title.includes('허용기준') || docId.includes('별표 19')) {
-            tags.add('노출기준설정');
-        }
-        if (title.includes('관리대상 유해물질') || docId.includes('별표 12')) {
-            tags.add('관리대상');
-        }
-        if (title.includes('제조 등이 금지') ||
-            content.includes('제조 등이 금지되는 유해물질')) {
-            tags.add('제조금지');
-        }
-        if (title.includes('허가 대상') || nearText.includes('허가 대상 유해물질')) {
-            tags.add('허가대상');
-        }
-        if (docId.startsWith('KOSHA07') || docId.startsWith('KOSHA06')) {
-            const merged = content + title + keyword;
-            if (merged.includes('발암')) tags.add('발암성');
-            if (merged.includes('변이원')) tags.add('변이원성');
-            if (merged.includes('생식')) tags.add('생식독성');
-        }
-        if (docId.startsWith('KOSHA07') && title.includes('건강관리')) {
-            tags.add('건강관리지침');
+            const idx = content.indexOf(cas);
+            if (idx > 0) {
+                const before = content.substring(Math.max(0, idx - 60), idx);
+                const m = before.match(/([가-힣][가-힣A-Za-z0-9\-]{1,25})\s*[\(
+\[;,]?\s*$/);
+                if (m) matchedName = m[1].trim();
+            }
         }
     }
 
-    if (isSpecial) tags.add('산안법');
-    if (matched.kosha) tags.add('산안법');
-
-    const anyMatched = matched.kosha || matched.nier || matched.nfa || matched.cci;
-    const status = anyMatched ? 'REGULATED' : 'NO_MATCH';
-
-    const sources = {
-        kosha: matched.kosha ? {
-            ok: true, hit: true,
-            note: `KOSHA 안전보건법령 ${matchedDocs.kosha.length}건 매칭`,
-            name: matchedName,
-            docs: matchedDocs.kosha.slice(0, 5)
-        } : { ok: true, hit: false, note: '산업안전보건법 매칭 없음' },
-        nier: { ok: true, hit: false, note: '화관법 매칭 없음' },
-        nfa: { ok: true, hit: false, note: '위험물안전관리법 매칭 없음' },
-        cci: { ok: true, hit: false, note: '화학물질안전원 매칭 없음' }
+    return {
+        hit,
+        matchedName,
+        tags: [...tags],
+        docs: docs.slice(0, 10)
     };
-
-    return { status, matched, tags: [...tags], matchedName: matchedName || null, sources };
 }
 
 /* =========================================================
-   ⭐ 정규식 문법 에러 수정: 모두 한 줄로 작성
+   유틸
    ========================================================= */
-function extractMatchedName(before, after, cas) {
-    if (!before) return null;
-
-    // 패턴 1: "벤젠(Benzene;..." 형태
-    const m1 = before.match(/([가-힣A-Za-z0-9\-,()\s]{2,40})\s*\(\s*[A-Za-z][^;]{0,40}$/);
-    if (m1) {
-        const name = m1[1].trim().replace(/^[\d\)\.\s]+/, '');
-        if (name.length >= 2 && name.length <= 40) return name;
-    }
-
-    // 패턴 2: "벤젠 [" 형태
-    const m2 = before.match(/([가-힣A-Za-z0-9\-]{2,30})\s*
-\[$/);
-    if (m2) return m2[1].trim();
-
-    // 패턴 3: "벤젠(" 또는 "벤젠[" 형태
-    const m3 = before.match(/([가-힣][가-힣A-Za-z0-9\-]{1,20})\s*[\(
-\[]?$/);
-    if (m3) return m3[1].trim();
-
-    return null;
-}
-
-function extractNameFromTitle(title) {
-    if (!title) return null;
-    const m = title.match(/^([가-힣A-Za-z][가-힣A-Za-z0-9\-\s]{1,30})[\(
-\[]/);
-    if (m) return m[1].trim();
-    return null;
-}
-
-function shortDoc(item) {
-    return {
-        docId: (item.doc_id || '').substring(0, 60),
-        title: (item.title || '').substring(0, 80),
-        category: item.category || '',
-        score: item.score || 0
-    };
-}
-
 function json(obj, status = 200) {
-    return new Response(JSON.stringify(obj), { status, headers: corsHeaders() });
+    return new Response(JSON.stringify(obj), { status, headers: cors() });
 }
 
-function corsHeaders() {
+function cors() {
     return {
         'Content-Type': 'application/json; charset=utf-8',
         'Access-Control-Allow-Origin': '*',
