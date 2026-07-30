@@ -363,6 +363,33 @@ function extractComposition(pdfText){
 }
 
 /* =========================================================
+   ⭐⭐⭐ [신규] 자동추출 결과 → 수동입력 테이블 동기화 헬퍼
+   ========================================================= */
+function syncParsedToManual(){
+    if(typeof manualCompRows === 'undefined') return;
+    if(!lastParsedMaterials || lastParsedMaterials.length === 0) return;
+    const m = lastParsedMaterials[0];
+    if(!m || !m.composition) return;
+
+    // 배열 참조 유지하면서 내용만 교체
+    manualCompRows.length = 0;
+    m.composition.forEach(c=>{
+        manualCompRows.push({
+            name: c.name || '',
+            cas: c.cas || '',
+            content: c.content || '',
+            contentNum: c.contentNum || 0
+        });
+    });
+    if(manualCompRows.length === 0){
+        manualCompRows.push({ name:'', cas:'', content:'', contentNum:0 });
+    }
+    if(typeof renderManualCompTable === 'function'){
+        renderManualCompTable();
+    }
+}
+
+/* =========================================================
    구성성분 검수 UI (참고용 · 하단 수동입력 테이블과 병행)
    ========================================================= */
 function renderCompositionReview(parsedMaterial){
@@ -372,7 +399,6 @@ function renderCompositionReview(parsedMaterial){
     if(!parsedMaterial.composition || parsedMaterial.composition.length === 0){
         container.classList.add('hidden');
         container.innerHTML = '';
-        // ⭐ 등록 버튼은 항상 활성화 (수동 입력 섹션이 있으므로)
         const regBtn = document.getElementById('btnRegister');
         if(regBtn){
             regBtn.disabled = false;
@@ -394,7 +420,7 @@ function renderCompositionReview(parsedMaterial){
     let html = ''
         + '<div class="p-4 border-2 ' + (valid?'border-green-300 bg-green-50':'border-amber-300 bg-amber-50') + ' rounded-lg">'
         +   '<div class="flex items-center justify-between mb-3 flex-wrap gap-2">'
-        +     '<h4 class="font-bold text-slate-800 text-sm">📋 MSDS 3번 「구성성분의 명칭 및 함유량」 자동추출 결과 <span class="text-[10px] text-gray-500 font-normal">(참고용 · 아래 수동입력 테이블에서 편집)</span></h4>'
+        +     '<h4 class="font-bold text-slate-800 text-sm">📋 MSDS 3번 「구성성분의 명칭 및 함유량」 자동추출 결과 <span class="text-[10px] text-gray-500 font-normal">(참고용 · 아래 수동입력 테이블과 실시간 동기화)</span></h4>'
         +     '<span class="px-3 py-1 text-xs font-bold rounded-full border ' + sumBadgeColor + '">'
         +       sumIcon + ' 합계 ' + sum + '%'
         +     '</span>'
@@ -445,13 +471,12 @@ function renderCompositionReview(parsedMaterial){
             + '</div>';
     }
 
-    // ⭐⭐⭐ 검수 체크박스 안내 문구 완화 (필수 → 참고)
     html += ''
         +   '<div class="mt-4 p-3 bg-blue-50 border-2 border-blue-300 rounded flex items-start gap-3">'
         +     '<i class="fa-solid fa-circle-info text-blue-600 text-lg mt-0.5"></i>'
         +     '<div class="text-xs text-slate-800 flex-1">'
-        +       '<b class="text-blue-800">참고사항</b>'
-        +       '<p class="mt-1">위 자동추출 결과는 <b>참고용</b>입니다. 실제 등록되는 성분은 <b class="text-teal-700">아래 「구성성분 수동 입력」 테이블</b>의 값이며, 이미 자동으로 동기화되어 있습니다. 필요시 수동입력 테이블에서 자유롭게 수정·추가·삭제하세요.</p>'
+        +       '<b class="text-blue-800">자동 동기화 안내</b>'
+        +       '<p class="mt-1">위 자동추출 결과를 수정하면 <b class="text-teal-700">아래 「구성성분 수동 입력」 테이블</b>에 <b>실시간으로 자동 반영</b>됩니다. 반대로 수동입력 테이블에서 수정한 내용도 자동추출 결과에 반영되어 항상 동일한 값이 유지됩니다.</p>'
         +     '</div>'
         +   '</div>'
         + '</div>';
@@ -459,7 +484,6 @@ function renderCompositionReview(parsedMaterial){
     container.innerHTML = html;
     container.classList.remove('hidden');
 
-    // ⭐⭐⭐ 등록 버튼은 항상 활성화 (수동 입력 섹션에서 편집 가능하므로)
     const regBtn = document.getElementById('btnRegister');
     if(regBtn){
         regBtn.disabled = false;
@@ -467,6 +491,9 @@ function renderCompositionReview(parsedMaterial){
     }
 }
 
+/* =========================================================
+   ⭐⭐⭐ 자동추출 결과 편집 → 즉시 수동입력 테이블도 동기화
+   ========================================================= */
 function updateCompItem(idx, field, value){
     const m = lastParsedMaterials[0];
     if(!m || !m.composition[idx]) return;
@@ -480,14 +507,23 @@ function updateCompItem(idx, field, value){
         } else {
             m.composition[idx].contentNum = 0;
         }
+        // 합계도 즉시 재계산
+        m.compositionSum = Math.round(m.composition.reduce((s,it)=>s+(it.contentNum||0),0)*10)/10;
+        m.compositionValid = (m.compositionSum >= 95 && m.compositionSum <= 105);
     }
+    // ⭐ 수동입력 테이블 즉시 반영
+    syncParsedToManual();
 }
 
 function removeCompItem(idx){
     const m = lastParsedMaterials[0];
     if(!m) return;
     m.composition.splice(idx, 1);
+    // 합계 재계산
+    m.compositionSum = Math.round(m.composition.reduce((s,it)=>s+(it.contentNum||0),0)*10)/10;
+    m.compositionValid = (m.compositionSum >= 95 && m.compositionSum <= 105);
     renderCompositionReview(m);
+    syncParsedToManual();
 }
 
 function addCompItem(){
@@ -496,6 +532,7 @@ function addCompItem(){
     if(!m.composition) m.composition = [];
     m.composition.push({name:'', cas:'', content:'', contentNum:0});
     renderCompositionReview(m);
+    syncParsedToManual();
 }
 
 function recalcCompSum(){
@@ -504,13 +541,13 @@ function recalcCompSum(){
     m.compositionSum = Math.round(m.composition.reduce((s,it)=>s+(it.contentNum||0),0)*10)/10;
     m.compositionValid = (m.compositionSum >= 95 && m.compositionSum <= 105);
     renderCompositionReview(m);
+    syncParsedToManual();
     showToast('합계 재계산: ' + m.compositionSum + '%');
 }
 
 function toggleCompReviewed(checked){
     const m = lastParsedMaterials[0];
     if(m) m.compositionReviewed = checked;
-    // ⭐ 등록 버튼은 항상 활성화 유지
     const regBtn = document.getElementById('btnRegister');
     if(regBtn){
         regBtn.disabled = false;
