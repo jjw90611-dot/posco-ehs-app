@@ -59,6 +59,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
         });
     }
 
+    // ⭐⭐⭐ ⑤ 특수건강진단 필터 이벤트 (신규 추가)
+    const f5Dept = document.getElementById('f5-dept');
+    const f5Name = document.getElementById('f5-name');
+    const f5Result = document.getElementById('f5-result');
+    if(f5Dept) f5Dept.addEventListener('input', ()=>renderHealth());
+    if(f5Name) f5Name.addEventListener('input', ()=>renderHealth());
+    if(f5Result) f5Result.addEventListener('change', ()=>renderHealth());
+
     // ④ ⑤ 초기 렌더
     renderMat(materials);
     renderHealth();
@@ -82,7 +90,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
         hdrEnvSoon.textContent = soon;
     }
 
-    // 상단 헤더 KPI (특수건진 대상 인원)
+    // ⭐ 상단 헤더 KPI (안심건강 근로제 대상 인원)
+    // ※ renderHealth() 내부에서도 갱신되지만, 초기 로드 시 명시적 호출
     const hdrHealth = document.getElementById('hdr-health');
     if(hdrHealth) hdrHealth.textContent = healths.length;
 });
