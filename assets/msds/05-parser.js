@@ -136,7 +136,7 @@ async function parseMSDSFile(file){
         base.composition = JSON.parse(JSON.stringify(best.kb.template.composition));
         base.compositionSum = base.composition.reduce((s,c)=>s+(c.contentNum||0), 0);
         base.compositionValid = true;
-        base.compositionWarnings = ['ℹ️ PDF 텍스트 추출 실패 → AI 지식베이스 표준 성분으로 자동 대체됨 (검수 후 등록 권장)'];
+        base.compositionWarnings = ['ℹ️ PDF 텍스트 추출 실패 → AI 지식베이스 표준 성분으로 자동 대체됨 (아래 「구성성분 수동 입력」에서 편집 가능)'];
         base.compositionRawText = composition.rawText || '(PDF 3번 항목 추출 실패)';
     } else {
         base.composition = composition.items;
@@ -154,18 +154,15 @@ async function parseMSDSFile(file){
    ⭐⭐⭐ 문자열 치환 유틸 (정규식 없이 안전하게)
    ========================================================= */
 function stripPunctuation(str){
-    // ⭐ 정규식 대신 하나씩 replaceAll 로 처리 (완전히 안전)
     const chars = [',', '.', '/', '(', ')', '[', ']', '|', '{', '}', '<', '>', '"', "'", '`'];
     let out = str;
     for(const c of chars){
-        // split/join 방식은 정규식을 전혀 사용하지 않음
         out = out.split(c).join(' ');
     }
     return out;
 }
 
 function stripBracketedName(str){
-    // ⭐ "(이명)", "[異名]", "(異名)", "[이명]" 같은 패턴 제거 - 문자열 처리로
     const patterns = ['(異名)', '[異名]', '(이명)', '[이명]', '(異名', '[異名', '異名)', '異名]'];
     let out = str;
     for(const p of patterns){
@@ -187,7 +184,6 @@ function extractComposition(pdfText){
         return result;
     }
 
-    // ⭐ 3번 섹션 시작점 탐색 (안전한 정규식)
     const startMatch = pdfText.match(/3\s*[.)]?\s*구성성분/);
     if(!startMatch){
         result.warnings.push('3번 "구성성분의 명칭 및 함유량" 항목을 찾지 못했습니다');
@@ -195,7 +191,6 @@ function extractComposition(pdfText){
     }
     const startIdx = startMatch.index;
 
-    // ⭐ 4번 섹션 시작점 탐색
     const endCandidates = [
         /4\s*[.)]\s*응급/,
         /4\s*[.)]\s*폭발/,
@@ -217,7 +212,6 @@ function extractComposition(pdfText){
     let section3 = pdfText.substring(startIdx, endIdx);
     result.rawText = section3.substring(0, 3000);
 
-    // ⭐ CAS 번호 추출
     const casPattern = /(\d{2,7}-\d{2}-\d)(\s*[\/,]?\s*KE-\d+)?/g;
     const casHits = [...section3.matchAll(casPattern)];
 
@@ -226,7 +220,6 @@ function extractComposition(pdfText){
         return result;
     }
 
-    // ⭐ 헤더/불용어 토큰
     const HEADER_TOKENS = new Set([
         '구성성분','명칭','함유량','화학물질명','관용명','이명',
         '및','또는','번호','식별번호','CAS','No','물질명','성분명',
@@ -240,13 +233,11 @@ function extractComposition(pdfText){
         const hitStart = hit.index;
         const hitEnd = hit.index + hit[0].length;
 
-        // ⭐ 이 CAS의 왼쪽에서 물질명 후보 추출
         const prevEnd = i === 0
             ? Math.max(0, hitStart - 60)
             : (casHits[i-1].index + casHits[i-1][0].length);
         let nameArea = section3.substring(Math.max(prevEnd, hitStart - 60), hitStart);
 
-        // ⭐⭐⭐ 정규식 대신 문자열 replaceAll(split/join) 로 처리 - 100% 안전
         nameArea = nameArea
             .split('구성성분의 명칭 및 함유량').join(' ')
             .split('구성성분 명칭 및 함유량').join(' ')
@@ -258,10 +249,8 @@ function extractComposition(pdfText){
             .split('관용명').join(' ')
             .split('이명').join(' ');
 
-        // ⭐ 괄호로 둘러싸인 "이명"/"異名" 제거
         nameArea = stripBracketedName(nameArea);
 
-        // ⭐ CAS 번호/식별번호 헤더 문구 제거
         nameArea = nameArea
             .split('CAS 번호 또는 식별번호').join(' ')
             .split('CAS번호 또는 식별번호').join(' ')
@@ -272,13 +261,8 @@ function extractComposition(pdfText){
             .split('함유량 (%)').join(' ')
             .split('함유량').join(' ');
 
-        // ⭐ 구두점 제거
         nameArea = stripPunctuation(nameArea);
-
-        // ⭐ 숫자 제거 (안전한 정규식)
         nameArea = nameArea.replace(/\d+/g, ' ');
-
-        // ⭐ 공백 정규화
         nameArea = nameArea.replace(/\s+/g, ' ').trim();
 
         const tokens = nameArea.split(' ')
@@ -296,7 +280,6 @@ function extractComposition(pdfText){
             }
         }
 
-        // ⭐ 함유량 추출: CAS 뒤 30자 이내
         const nextHitStart = casHits[i+1] ? casHits[i+1].index : section3.length;
         const contentAreaEnd = Math.min(hitEnd + 30, nextHitStart);
         let contentArea = section3.substring(hitEnd, contentAreaEnd);
@@ -307,7 +290,6 @@ function extractComposition(pdfText){
         let content = '-';
         let contentNum = 0;
 
-        // ⭐ 안전한 정규식만 사용 (문자 클래스 안에 escape 필요 문자 없음)
         const patterns = [
             { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-∼–]\s*(\d{1,3}(?:\.\d+)?)\s*%/, range: true },
             { re: /([<>≥≤]?\s*\d{1,3}(?:\.\d+)?)\s*[~\-∼–]\s*(\d{1,3}(?:\.\d+)?)(?!\d)/, range: true },
@@ -339,7 +321,6 @@ function extractComposition(pdfText){
             }
         }
 
-        // 중복 CAS 체크
         let duplicate = false;
         for(let k=0; k<result.items.length; k++){
             if(result.items[k].cas === cas){ duplicate = true; break; }
@@ -382,7 +363,7 @@ function extractComposition(pdfText){
 }
 
 /* =========================================================
-   구성성분 검수 UI
+   구성성분 검수 UI (참고용 · 하단 수동입력 테이블과 병행)
    ========================================================= */
 function renderCompositionReview(parsedMaterial){
     const container = document.getElementById('compositionReviewArea');
@@ -391,6 +372,7 @@ function renderCompositionReview(parsedMaterial){
     if(!parsedMaterial.composition || parsedMaterial.composition.length === 0){
         container.classList.add('hidden');
         container.innerHTML = '';
+        // ⭐ 등록 버튼은 항상 활성화 (수동 입력 섹션이 있으므로)
         const regBtn = document.getElementById('btnRegister');
         if(regBtn){
             regBtn.disabled = false;
@@ -412,7 +394,7 @@ function renderCompositionReview(parsedMaterial){
     let html = ''
         + '<div class="p-4 border-2 ' + (valid?'border-green-300 bg-green-50':'border-amber-300 bg-amber-50') + ' rounded-lg">'
         +   '<div class="flex items-center justify-between mb-3 flex-wrap gap-2">'
-        +     '<h4 class="font-bold text-slate-800 text-sm">📋 MSDS 3번 「구성성분의 명칭 및 함유량」 자동추출 결과</h4>'
+        +     '<h4 class="font-bold text-slate-800 text-sm">📋 MSDS 3번 「구성성분의 명칭 및 함유량」 자동추출 결과 <span class="text-[10px] text-gray-500 font-normal">(참고용 · 아래 수동입력 테이블에서 편집)</span></h4>'
         +     '<span class="px-3 py-1 text-xs font-bold rounded-full border ' + sumBadgeColor + '">'
         +       sumIcon + ' 합계 ' + sum + '%'
         +     '</span>'
@@ -463,24 +445,25 @@ function renderCompositionReview(parsedMaterial){
             + '</div>';
     }
 
+    // ⭐⭐⭐ 검수 체크박스 안내 문구 완화 (필수 → 참고)
     html += ''
-        +   '<div class="mt-4 p-3 bg-white border-2 border-slate-400 rounded flex items-start gap-3">'
-        +     '<input type="checkbox" id="compReviewedChk" class="w-5 h-5 mt-0.5" ' + (parsedMaterial.compositionReviewed?'checked':'') + ' onchange="toggleCompReviewed(this.checked)">'
-        +     '<label for="compReviewedChk" class="text-xs font-semibold text-slate-800 cursor-pointer flex-1">'
-        +       '위 구성성분 정보를 MSDS 원본과 대조하여 <span class="text-red-600 font-bold">검수 완료</span>하였습니다.'
-        +       '<span class="block text-[11px] text-slate-500 mt-1 font-normal">※ 검수 완료해야 「AI 자동분석 및 등록」 버튼이 활성화됩니다.</span>'
-        +     '</label>'
+        +   '<div class="mt-4 p-3 bg-blue-50 border-2 border-blue-300 rounded flex items-start gap-3">'
+        +     '<i class="fa-solid fa-circle-info text-blue-600 text-lg mt-0.5"></i>'
+        +     '<div class="text-xs text-slate-800 flex-1">'
+        +       '<b class="text-blue-800">참고사항</b>'
+        +       '<p class="mt-1">위 자동추출 결과는 <b>참고용</b>입니다. 실제 등록되는 성분은 <b class="text-teal-700">아래 「구성성분 수동 입력」 테이블</b>의 값이며, 이미 자동으로 동기화되어 있습니다. 필요시 수동입력 테이블에서 자유롭게 수정·추가·삭제하세요.</p>'
+        +     '</div>'
         +   '</div>'
         + '</div>';
 
     container.innerHTML = html;
     container.classList.remove('hidden');
 
+    // ⭐⭐⭐ 등록 버튼은 항상 활성화 (수동 입력 섹션에서 편집 가능하므로)
     const regBtn = document.getElementById('btnRegister');
     if(regBtn){
-        regBtn.disabled = !parsedMaterial.compositionReviewed;
-        regBtn.classList.toggle('opacity-50', !parsedMaterial.compositionReviewed);
-        regBtn.classList.toggle('cursor-not-allowed', !parsedMaterial.compositionReviewed);
+        regBtn.disabled = false;
+        regBtn.classList.remove('opacity-50','cursor-not-allowed');
     }
 }
 
@@ -527,13 +510,13 @@ function recalcCompSum(){
 function toggleCompReviewed(checked){
     const m = lastParsedMaterials[0];
     if(m) m.compositionReviewed = checked;
+    // ⭐ 등록 버튼은 항상 활성화 유지
     const regBtn = document.getElementById('btnRegister');
     if(regBtn){
-        regBtn.disabled = !checked;
-        regBtn.classList.toggle('opacity-50', !checked);
-        regBtn.classList.toggle('cursor-not-allowed', !checked);
+        regBtn.disabled = false;
+        regBtn.classList.remove('opacity-50','cursor-not-allowed');
     }
-    if(checked) showToast('✅ 검수 완료 - 등록 버튼 활성화');
+    if(checked) showToast('✅ 검수 완료');
 }
 
 function showRawSection3(){
