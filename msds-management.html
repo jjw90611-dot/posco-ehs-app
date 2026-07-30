@@ -451,8 +451,22 @@
                     <p id="matEmpty" class="hidden text-center py-12 text-gray-400 text-sm"><i class="fa-solid fa-inbox text-3xl mb-2 block"></i>등록된 물질이 없습니다. 우측 상단의 <b>물질 등록</b> 버튼을 눌러 시작하세요.</p>
                 </div>
 
-                <!-- ⑤ 특수건강진단 -->
+                <!-- ⑤ 특수건강진단 (안심건강 근로제) -->
                 <div id="tab-health" class="tab-panel">
+                    <!-- ⭐ 안심건강 근로제 안내 배너 (신규) -->
+                    <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border-l-4 border-indigo-500 rounded-lg p-3 mb-4">
+                        <div class="flex items-start gap-2">
+                            <i class="fa-solid fa-shield-heart text-indigo-600 text-xl mt-0.5"></i>
+                            <div class="flex-1">
+                                <p class="text-sm font-black text-indigo-800">「안심건강 근로제」 대상자 관리</p>
+                                <p class="text-[11px] text-indigo-700 mt-0.5">
+                                    <b>기준</b>: 혈압 160/100 미만 · 90/50 이상 | 공복혈당 70~180 mg/dL | LDL 190 미만 | 중성지방 500 미만 mg/dL
+                                    &nbsp;|&nbsp; <b>유효기간</b>: 50세↑ 1년 · 70세↑ 6개월
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
                         <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center"><p class="text-[11px] font-bold text-gray-500">총 인원</p><p class="text-xl font-black text-gray-800 mt-1" id="k5-total">0<span class="text-xs text-gray-500"> 명</span></p></div>
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center"><p class="text-[11px] font-bold text-blue-600">적격</p><p class="text-xl font-black text-blue-700 mt-1" id="k5-ok">0<span class="text-xs text-gray-500"> 명</span></p></div>
@@ -469,9 +483,8 @@
                             <div class="flex items-end"><button onclick="renderHealth()" class="w-full bg-white border border-gray-300 hover:bg-slate-50 text-xs font-semibold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-filter mr-1"></i>필터 적용</button></div>
                         </div>
                         <div class="flex justify-end mt-3 gap-2 flex-wrap">
-                            <button onclick="document.getElementById('uploadReport').click()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-file-import mr-1"></i>검진결과서 업로드</button>
-                            <input type="file" id="uploadReport" class="hidden" accept=".pdf,.jpg,.png,.jpeg" onchange="parseReport(event)">
-                            <button onclick="addHealthRow()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>수동 추가</button>
+                            <!-- ⭐ 검진결과서 업로드 노란 버튼 삭제, 성명 옆 파일 업로드로 대체 -->
+                            <button onclick="addHealthRow()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-plus mr-1"></i>추가</button>
                             <button onclick="downloadExcel()" class="bg-white border border-gray-300 hover:bg-slate-50 text-xs font-semibold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-file-excel mr-1 text-emerald-600"></i>엑셀 다운로드</button>
                             <button onclick="document.getElementById('uploadExcel').click()" class="bg-white border border-gray-300 hover:bg-slate-50 text-xs font-semibold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-file-arrow-up mr-1"></i>엑셀 업로드</button>
                             <input type="file" id="uploadExcel" class="hidden" accept=".xlsx,.xls" onchange="importExcel(event)">
@@ -480,33 +493,49 @@
 
                     <div class="overflow-x-auto border border-gray-200 rounded-lg">
                         <table class="excel-grid" id="healthGrid">
+                            <!-- ⭐⭐⭐ 헤더 완전 재설계 (단일 행) -->
                             <thead>
                                 <tr>
-                                    <th rowspan="2">구분</th><th rowspan="2">부서명</th>
-                                    <th colspan="3">기본정보</th>
-                                    <th colspan="2" style="color:#0369a1">검진결과서 內 검진일 기준</th>
-                                    <th rowspan="2">검진결과<br>부적격 기준</th>
-                                    <th colspan="2">혈압</th><th>혈당</th><th colspan="2">콜레스테롤</th>
-                                    <th rowspan="2">고령근로자<br>확인서</th>
-                                    <th rowspan="2">개인정보<br>동의서</th>
-                                    <th rowspan="2" style="color:#b91c1c;min-width:200px;white-space:normal">기타 [부적합시]<br>-복약,생활습관 개선 안내<br>-검진결과 재제출(3개월 內)</th>
-                                    <th rowspan="2">검토결과<br>(적격/부적격)</th>
-                                    <th rowspan="2">삭제</th>
-                                </tr>
-                                <tr class="sub-hd">
-                                    <th>성명</th><th>나이</th><th>성별</th>
-                                    <th>검진일</th><th class="col-valid">검진결과<br>유효기간</th>
-                                    <th class="col-criteria">SBP<br>160▲/90▼</th>
-                                    <th class="col-criteria">DBP<br>100▲/50▼</th>
-                                    <th class="col-criteria">공복혈당<br>126▲/70▼</th>
-                                    <th class="col-criteria">T.G<br>500▲</th>
-                                    <th class="col-criteria">LDL<br>190▲</th>
+                                    <th style="min-width:40px">구분</th>
+                                    <th style="min-width:80px">부서명</th>
+                                    <th style="min-width:200px">성명·서류<br>
+                                        <span style="font-size:9px;color:#6b7280;font-weight:normal">📋검진결과 📝동의서 👴고령확인</span>
+                                    </th>
+                                    <th style="min-width:110px">생년월일</th>
+                                    <th style="min-width:70px">만 나이<br>
+                                        <span style="font-size:9px;color:#6b7280;font-weight:normal">(자동)</span>
+                                    </th>
+                                    <th style="min-width:50px">성별</th>
+                                    <th style="min-width:110px">검진일자</th>
+                                    <th style="min-width:130px" class="col-valid">유효기간</th>
+                                    <th style="min-width:120px" class="col-criteria">부적격 기준<br>
+                                        <span style="font-size:9px;color:#6b7280;font-weight:normal">(안심건강 근로제)</span>
+                                    </th>
+                                    <th class="col-criteria" style="color:#0369a1">SBP<br>160▲/90▼</th>
+                                    <th class="col-criteria" style="color:#0369a1">DBP<br>100▲/50▼</th>
+                                    <th class="col-criteria" style="color:#0369a1">공복혈당<br>180▲/70▼</th>
+                                    <th class="col-criteria" style="color:#0369a1">T.G<br>500▲</th>
+                                    <th class="col-criteria" style="color:#0369a1">LDL<br>190▲</th>
+                                    <th style="min-width:200px;white-space:normal;color:#b91c1c">기타 [부적합시]<br>
+                                        <span style="font-size:9px;font-weight:normal">-복약·생활습관 개선 안내<br>-검진결과 재제출(3개월 內)</span>
+                                    </th>
+                                    <th style="min-width:90px">검토결과<br>
+                                        <span style="font-size:9px;color:#6b7280;font-weight:normal">(적격/부적격)</span>
+                                    </th>
+                                    <th style="min-width:80px">삭제</th>
                                 </tr>
                             </thead>
                             <tbody id="healthBody"></tbody>
                         </table>
                     </div>
-                    <p class="text-[11px] text-gray-500 mt-2">💡 <b>사용법:</b> 셀을 클릭하여 값을 직접 편집할 수 있습니다. 편집 후 다른 곳을 클릭하면 자동 저장되며 <b>검토결과가 재계산</b>됩니다. 부적격 기준을 벗어난 값은 <span class="text-rose-600 font-bold">빨간색</span>으로 표시됩니다.</p>
+                    <p class="text-[11px] text-gray-500 mt-2">
+                        💡 <b>사용법:</b>
+                        ① <b>추가</b> 버튼으로 빈 행 생성 →
+                        ② 성명·부서·생년월일(예: <code class="bg-gray-100 px-1 rounded">19901221</code>) 입력 →
+                        ③ 성명 옆 <b>📋검진결과 · 📝동의서 · 👴고령확인(70세↑)</b> 파일 업로드 →
+                        ④ 셀 클릭하여 혈압·혈당·콜레스테롤 값 직접 입력.
+                        부적격 기준을 벗어난 값은 <span class="text-rose-600 font-bold">빨간색</span>으로 표시되며 검토결과가 자동 갱신됩니다.
+                    </p>
                 </div>
             </div>
         </div>
