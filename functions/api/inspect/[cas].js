@@ -335,19 +335,19 @@ function analyzeItems(cas, items) {
 function extractMatchedName(before, after, cas) {
     // 패턴 1: "물질명(Chemical; CAS)"
     const m1 = before.match(/([가-힣A-Za-z0-9\-,()\s]{2,40})\s*\(\s*[A-Za-z][^;]{0,40}$/);
-    if (m1) {
-        const name = m1[1].trim().replace(/^[\d\)\.\s]+/, '');
-        if (name.length >= 2 && name.length <= 40) return name;
-    }
-    // 패턴 2: "물질명[CAS]"
-    const m2 = before.match(/([가-힣A-Za-z0-9\-]{2,30})\s*
+if (m1) {
+    const name = m1[1].trim().replace(/^[\d\)\.\s]+/, '');
+    if (name.length >= 2 && name.length <= 40) return name;
+}
+// 패턴 2: "물질명[CAS]"
+const m2 = before.match(/([가-힣A-Za-z0-9\-]{2,30})\s*
 \[$/);
-    if (m2) return m2[1].trim();
+if (m2) return m2[1].trim();
 
-    // 패턴 3: 간단히 CAS 앞의 한글/영문 단어
-    const m3 = before.match(/([가-힣][가-힣A-Za-z0-9\-]{1,20})\s*[\(
+// 패턴 3: 간단히 CAS 앞의 한글/영문 단어
+const m3 = before.match(/([가-힣][가-힣A-Za-z0-9\-]{1,20})\s*[\(
 \[]?$/);
-    if (m3) return m3[1].trim();
+if (m3) return m3[1].trim();
 
     return null;
 }
