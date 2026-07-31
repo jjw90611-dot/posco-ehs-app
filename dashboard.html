@@ -15,6 +15,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-gray-800">
 
+    <!-- 상단 네비게이션 -->
     <nav class="bg-[#00529C] text-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
@@ -39,6 +40,7 @@
         </div>
     </nav>
 
+    <!-- 관리자 패널 -->
     <section id="adminPanel" class="hidden bg-amber-50 border-b-2 border-amber-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-4">
             <h2 class="text-base font-black text-amber-900 flex items-center gap-2">
@@ -117,21 +119,7 @@
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500">
                 <p class="text-[11px] font-bold text-gray-500 uppercase">CCTV 미설치</p>
                 <p class="text-2xl font-black text-amber-600 mt-1"><span id="kpiNoCctv">0</span><span class="text-sm text-gray-600"> 건</span></p>
-                <p class="text-[10px] text-gray-400 mt-0.5">모니터링 사각지대</p>
-            </div>
-        </div>
-
-        <!-- 시공사별 현황 -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 class="text-sm font-black text-gray-800 mb-1 flex items-center gap-2">
-                <i class="fa-solid fa-sitemap text-[#00529C]"></i>시공사별 작업 현황
-            </h3>
-            <p class="text-[10px] text-gray-500 mb-3">
-                ※ 작업지시부서가 <b class="text-[#00529C]">"포스코"로 시작</b>하면 포스코 본사 부서 → <b>포스코퓨처엠 자체시공</b> /
-                <b class="text-amber-700">그 외</b>는 외부 시공사 (포스코이앤씨는 별도 계열사로 외부 시공)
-            </p>
-            <div id="contractorSummary" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <p class="text-xs text-gray-400 col-span-full text-center py-4">데이터 없음</p>
+                <p class="text-[10px] text-gray-400 mt-0.5"><span>모니터링 사각지대</span></p>
             </div>
         </div>
 
@@ -163,14 +151,11 @@
                 <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
                     <i class="fa-solid fa-clipboard-list text-[#00529C]"></i>금일 작업 상세 현황
                 </h3>
-                <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
                     <select id="filterRisk" onchange="renderWorkList()" class="text-xs border border-gray-300 rounded px-2 py-1">
-                        <option value="all">전체 위험도</option>
+                        <option value="all">전체</option>
                         <option value="high">고위험만</option>
                         <option value="normal">일반만</option>
-                    </select>
-                    <select id="filterContractor" onchange="renderWorkList()" class="text-xs border border-gray-300 rounded px-2 py-1">
-                        <option value="all">전체 시공사</option>
                     </select>
                     <input type="text" id="filterKeyword" oninput="renderWorkList()" placeholder="🔍 부서/장소/담당자 검색" class="text-xs border border-gray-300 rounded px-2 py-1 w-56">
                 </div>
@@ -265,10 +250,31 @@
         document.getElementById('kpiNoAccidentSince').textContent = `${start} ~`;
     }
 
+    /* 시공사 판정 */
+    const POSCO_AFFILIATES_AS_CONTRACTOR = [
+        '포스코이앤씨', '포스코이엔씨', '포스코E&C', '포스코EC', 'POSCOE&C'
+    ];
+    function normalizeName(s){ return (s||'').trim().replace(/\s+/g,'').toUpperCase(); }
+    function isPoscoInternalDept(orderDept){
+        const t = normalizeName(orderDept);
+        if(!t) return false;
+        if(!t.startsWith('포스코')) return false;
+        for(const aff of POSCO_AFFILIATES_AS_CONTRACTOR){
+            if(t === normalizeName(aff)) return false;
+        }
+        return true;
+    }
+    function getContractor(w){
+        const order = (w.orderDept||'').trim();
+        if(!order) return { name: '미지정', isSelf: false };
+        if(isPoscoInternalDept(order)) return { name: '포스코퓨처엠', isSelf: true };
+        return { name: order, isSelf: false };
+    }
+
     function parseTSV(raw){
         const rows = [];
         let cur = []; let cell = ''; let inQuote = false;
-        for(let i=0; i<raw.length; i++){
+        for(let i = 0; i < raw.length; i++){
             const c = raw[i];
             if(inQuote){
                 if(c === '"'){
@@ -288,14 +294,14 @@
     }
 
     function isHeaderRow(cells){
-        const joined = cells.slice(0,6).join('').replace(/\s/g,'');
-        const kws = ['일자','작업상세정보','NO.','고위험','운전부서','작업지시부서','작업장소','작업명','부서','공장','가동상태','실장','현장소장','부식개소','안전Monitor','CCTV','유무'];
+        const joined = cells.slice(0, 6).join('').replace(/\s/g,'');
+        const headerKeywords = ['일자','작업상세정보','NO.','고위험','운전부서','작업지시부서','작업장소','작업명','부서','공장','가동상태','실장','현장소장','부식개소','안전Monitor','CCTV','유무'];
         const c0 = (cells[0]||'').trim();
         if(!c0) return true;
-        let hit = 0;
-        for(const kw of kws){
-            if(joined.includes(kw.replace(/\s/g,''))) hit++;
-            if(hit >= 2) return true;
+        let hitCount = 0;
+        for(const kw of headerKeywords){
+            if(joined.includes(kw.replace(/\s/g,''))) hitCount++;
+            if(hitCount >= 2) return true;
         }
         return false;
     }
@@ -311,42 +317,6 @@
         return (dateOk?1:0) + (noOk?1:0) + (peopleOk?1:0) >= 2;
     }
 
-    /* =========================================================
-       ★ 시공사 판정 로직 (최종)
-       - 작업지시부서가 "포스코"로 시작하면 → 포스코 본사 부서 = 자체시공
-       - 단, "포스코이앤씨/이엔씨/E&C" 등 별도 계열사는 예외 → 외부시공
-       - 그 외 회사명 → 외부 시공사
-       ========================================================= */
-
-    // 별도 계열사(포스코로 시작하지만 시공사인 회사) 리스트
-    const POSCO_AFFILIATES_AS_CONTRACTOR = [
-        '포스코이앤씨', '포스코이엔씨', '포스코E&C', '포스코EC', 'POSCOE&C'
-        // 필요시 계속 추가: 포스코건설(구 사명), 포스코오앤엠 등
-    ];
-
-    function normalize(s){ return (s||'').trim().replace(/\s+/g,'').toUpperCase(); }
-
-    function isPoscoInternalDept(orderDept){
-        const t = normalize(orderDept);
-        if(!t) return false;
-        if(!t.startsWith('포스코')) return false;
-        // "포스코"로 시작해도 별도 계열사(예: 포스코이앤씨)면 외부시공
-        for(const aff of POSCO_AFFILIATES_AS_CONTRACTOR){
-            if(t === normalize(aff)) return false;
-        }
-        return true;  // 포스코 본사 부서로 간주
-    }
-
-    function getContractor(w){
-        const order = (w.orderDept||'').trim();
-        if(!order) return { name: '미지정', isSelf: false };
-
-        if(isPoscoInternalDept(order)){
-            return { name: '포스코퓨처엠 (자체시공)', isSelf: true };
-        }
-        return { name: order, isSelf: false };
-    }
-
     function parseAndApply(){
         const raw = document.getElementById('excelPaste').value;
         const resultEl = document.getElementById('parseResult');
@@ -360,7 +330,7 @@
         const parsed = [];
         let skip = 0;
 
-        rows.forEach((cells, idx)=>{
+        rows.forEach((cells, idx) => {
             if(cells.length < 10){ skip++; return; }
             if(isHeaderRow(cells)){ skip++; return; }
             if(!isValidDataRow(cells)){ skip++; return; }
@@ -368,7 +338,7 @@
             const isO = v => (v||'').trim().toUpperCase() === 'O';
 
             parsed.push({
-                id: 'w'+Date.now()+'_'+idx,
+                id: 'w' + Date.now() + '_' + idx,
                 date:          (cells[0]||'').trim(),
                 no:            (cells[1]||'').trim(),
                 highRisk:      isO(cells[2]),
@@ -425,7 +395,11 @@
     }
 
     function exportJSON(){
-        const data = { noAccidentStart: localStorage.getItem(STORAGE_KEYS.noAccident), workData: WORK_DATA, exportedAt: new Date().toISOString() };
+        const data = {
+            noAccidentStart: localStorage.getItem(STORAGE_KEYS.noAccident),
+            workData: WORK_DATA,
+            exportedAt: new Date().toISOString()
+        };
         const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -492,73 +466,6 @@
         }
     }
 
-    function renderContractorSummary(){
-        const box = document.getElementById('contractorSummary');
-        const filterSel = document.getElementById('filterContractor');
-
-        if(WORK_DATA.length === 0){
-            box.innerHTML = '<p class="text-xs text-gray-400 col-span-full text-center py-4">데이터 없음</p>';
-            filterSel.innerHTML = '<option value="all">전체 시공사</option>';
-            return;
-        }
-
-        const grp = {};
-        WORK_DATA.forEach(w=>{
-            const info = getContractor(w);
-            const key = info.name;
-            if(!grp[key]) grp[key] = { name: key, isSelf: info.isSelf, count:0, people:0, highRisk:0, vendors:new Set() };
-            grp[key].count += 1;
-            grp[key].people += parseInt(w.people)||0;
-            if(w.highRisk) grp[key].highRisk += 1;
-            if(w.vendor && w.vendor !== '없음') grp[key].vendors.add(w.vendor);
-        });
-
-        const sorted = Object.values(grp).sort((a,b)=>{
-            if(a.isSelf && !b.isSelf) return -1;
-            if(!a.isSelf && b.isSelf) return 1;
-            return b.people - a.people;
-        });
-
-        filterSel.innerHTML = '<option value="all">전체 시공사</option>' + sorted.map(g=>
-            `<option value="${esc(g.name)}">${esc(g.name)} (${g.count}건)</option>`
-        ).join('');
-
-        box.innerHTML = sorted.map(g=>{
-            const bg = g.isSelf ? 'bg-blue-50 border-[#00529C]' : 'bg-amber-50 border-amber-500';
-            const badge = g.isSelf
-                ? '<span class="bg-[#00529C] text-white text-[9px] font-black px-1.5 py-0.5 rounded">자체시공</span>'
-                : '<span class="bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded">외부 시공</span>';
-            const icon = g.isSelf ? 'fa-industry' : 'fa-building-user';
-            return `
-            <div class="border-l-4 ${bg} rounded-lg p-3">
-                <div class="flex items-center justify-between mb-1">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                        <i class="fa-solid ${icon} text-gray-500"></i>
-                        <span class="text-xs font-black text-gray-800 truncate" title="${esc(g.name)}">${esc(g.name)}</span>
-                    </div>
-                    ${badge}
-                </div>
-                <div class="grid grid-cols-3 gap-1 mt-2 text-center">
-                    <div>
-                        <p class="text-[9px] text-gray-500">작업</p>
-                        <p class="text-sm font-black text-gray-800">${g.count}건</p>
-                    </div>
-                    <div>
-                        <p class="text-[9px] text-gray-500">인원</p>
-                        <p class="text-sm font-black text-indigo-600">${g.people}명</p>
-                    </div>
-                    <div>
-                        <p class="text-[9px] text-gray-500">고위험</p>
-                        <p class="text-sm font-black ${g.highRisk>0?'text-rose-600':'text-gray-400'}">${g.highRisk}건</p>
-                    </div>
-                </div>
-                <p class="text-[10px] text-gray-500 mt-1.5 truncate" title="${[...g.vendors].join(', ')}">
-                    <i class="fa-solid fa-handshake text-gray-400 mr-1"></i>용역사 ${g.vendors.size}: ${[...g.vendors].join(', ')||'-'}
-                </p>
-            </div>`;
-        }).join('');
-    }
-
     function renderSiteHeadcount(){
         const box = document.getElementById('siteHeadcount');
         if(WORK_DATA.length === 0){
@@ -592,15 +499,11 @@
     function renderWorkList(){
         const list = document.getElementById('workList');
         const filterRisk = document.getElementById('filterRisk').value;
-        const filterContractor = document.getElementById('filterContractor').value;
         const keyword = document.getElementById('filterKeyword').value.trim().toLowerCase();
 
         let filtered = WORK_DATA;
         if(filterRisk==='high') filtered = filtered.filter(w=>w.highRisk);
         if(filterRisk==='normal') filtered = filtered.filter(w=>!w.highRisk);
-        if(filterContractor!=='all'){
-            filtered = filtered.filter(w=>getContractor(w).name === filterContractor);
-        }
         if(keyword){
             filtered = filtered.filter(w=>
                 (w.deptOwner+w.factory+w.location+w.workName+w.pfmSiteMgr+w.vendorSiteMgr+w.vendor+w.safetyMgrName+w.orderDept).toLowerCase().includes(keyword)
@@ -628,8 +531,10 @@
             const contractorBadge = c.isSelf
                 ? '<span class="bg-[#00529C] text-white text-[10px] font-black px-2 py-0.5 rounded">🏭 자체시공</span>'
                 : '<span class="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded">🏗 외부시공</span>';
-
             const displayContractor = c.isSelf ? '포스코퓨처엠' : (w.orderDept || '-');
+
+            // ★ 가동상태: O이면 ✅, 그 외(X, 공백 등)는 ❌
+            const opStatusMark = (w.opStatus||'').trim().toUpperCase()==='O' ? '✅' : '❌';
 
             return `
             <details class="border ${w.highRisk?'border-rose-200 bg-rose-50/30':'border-gray-200 bg-white'} rounded-lg">
@@ -682,10 +587,10 @@
                         <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${esc(w.action)}</pre>
                     </div>`:''}
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
-                        <div class="bg-white rounded p-2 border"><b>가동상태:</b> ${esc(w.opStatus)||'-'}</div>
+                        <div class="bg-white rounded p-2 border"><b>가동상태:</b> ${opStatusMark}</div>
                         <div class="bg-white rounded p-2 border"><b>실장결재(수리):</b> ${w.signMgr1?'✅':'❌'}</div>
                         <div class="bg-white rounded p-2 border"><b>소장결재(점검):</b> ${w.signSiteMgr?'✅':'❌'}</div>
-                        <div class="bg-white rounded p-2 border"><b>부장결재(부식):</b> ${w.signHead?'✅':'—'}</div>
+                        <div class="bg-white rounded p-2 border"><b>부장결재(부식):</b> ${w.signHead?'✅':'❌'}</div>
                     </div>
                 </div>
             </details>`;
@@ -699,7 +604,6 @@
     function renderAll(){
         updateNoAccidentKPI();
         updateKPI();
-        renderContractorSummary();
         renderSiteHeadcount();
         renderWorkList();
     }
