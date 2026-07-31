@@ -78,7 +78,8 @@
                 </label>
                 <p class="text-[11px] text-gray-500 mb-2">
                     엑셀에서 <b>헤더 포함 통째로 복사</b>해도 OK. 헤더 행은 자동으로 스킵됩니다.<br>
-                    ※ 셀 안 개행(줄바꿈)이 있는 데이터도 정상 처리됩니다.
+                    ※ 셀 안 개행(줄바꿈)이 있는 데이터도 정상 처리됩니다.<br>
+                    <b class="text-emerald-700">🏭 자체시공 판정</b>: 작업지시부서가 <b>포스코이앤씨/이엔씨/E&C</b>가 아닌 모든 경우 (팀/실/그룹/섹션 포함)
                 </p>
                 <textarea id="excelPaste" rows="6" placeholder="7/31&#9;1&#9;X&#9;포스코투자엔지니어링실&#9;..." 
                     class="w-full border border-gray-300 rounded px-3 py-2 text-xs font-mono resize-y focus:outline-none focus:border-amber-500"></textarea>
@@ -342,26 +343,48 @@
         }
     }
 
-    const POSCO_AFFILIATES_AS_CONTRACTOR = [
-        '포스코이앤씨', '포스코이엔씨', '포스코E&C', '포스코EC', 'POSCOE&C'
+    /* =========================================================
+       ★★★ 시공사 판정 로직 (재설계) ★★★
+       원리:
+       - 모든 작업은 기본적으로 포스코퓨처엠이 시공
+       - 단, 작업지시부서(orderDept)가 '포스코이앤씨' 계열이면 → 외부시공
+       
+       예시:
+       - 전기로건설TF팀 → 자체시공 (포스코 부서)
+       - TA Project팀, 조업안전섹션, 설비관리그룹, VGOFCC TA팀 → 자체시공
+       - 포스코 → 자체시공
+       - 포스코이앤씨 / 포스코이엔씨 / 포스코E&C → 외부시공
+       ========================================================= */
+    const EXTERNAL_CONTRACTORS = [
+        '포스코이앤씨',
+        '포스코이엔씨',
+        '포스코E&C',
+        '포스코EC',
+        'POSCOE&C',
+        'POSCOENC'
     ];
-    function normalizeName(s){ return (s||'').trim().replace(/\s+/g,'').toUpperCase(); }
-    function isPoscoInternalDept(orderDept){
-        const t = normalizeName(orderDept);
-        if(!t) return false;
-        if(!t.startsWith('포스코')) return false;
-        for(const aff of POSCO_AFFILIATES_AS_CONTRACTOR){
-            if(t === normalizeName(aff)) return false;
-        }
-        return true;
-    }
-    function getContractor(w){
-        const order = (w.orderDept||'').trim();
-        if(!order) return { name: '미지정', isSelf: false };
-        if(isPoscoInternalDept(order)) return { name: '포스코퓨처엠', isSelf: true };
-        return { name: order, isSelf: false };
+
+    function normalizeName(s){ 
+        return (s||'').trim().replace(/\s+/g,'').toUpperCase(); 
     }
 
+    function isExternalContractor(orderDept){
+        const t = normalizeName(orderDept);
+        if(!t) return false;
+        return EXTERNAL_CONTRACTORS.some(ec => t === normalizeName(ec));
+    }
+
+    function getContractor(w){
+        const order = (w.orderDept||'').trim();
+        // 작업지시부서 미지정 → 기본은 자체시공
+        if(!order) return { name: '포스코퓨처엠', isSelf: true };
+        // 포스코이앤씨 계열만 외부시공
+        if(isExternalContractor(order)) return { name: order, isSelf: false };
+        // 그 외 모든 부서(팀/실/그룹/섹션 등) → 자체시공
+        return { name: '포스코퓨처엠', isSelf: true };
+    }
+
+    /* ========= TSV 파서 ========= */
     function parseTSV(raw){
         const rows = [];
         let cur = []; let cell = ''; let inQuote = false;
@@ -465,7 +488,9 @@
         }
         WORK_DATA = parsed;
         localStorage.setItem(STORAGE_KEYS.workData, JSON.stringify(WORK_DATA));
-        resultEl.textContent = `✅ ${parsed.length}건 반영 완료${skip?` (${skip}행 자동 스킵)`:''}`;
+        const selfCount = parsed.filter(w => getContractor(w).isSelf).length;
+        const extCount = parsed.length - selfCount;
+        resultEl.textContent = `✅ ${parsed.length}건 반영 (자체 ${selfCount}건 / 외부 ${extCount}건)${skip?` · ${skip}행 스킵`:''}`;
         resultEl.className = 'ml-2 self-center text-sm font-bold text-emerald-600';
         renderAll();
     }
@@ -629,6 +654,9 @@
                                 <span class="text-gray-500">발주:</span>
                                 <b class="text-gray-800">${esc(w.deptOwner)||'-'}</b>
                                 <span class="chain-arrow">▶</span>
+                                <span class="text-gray-500">지시:</span>
+                                <b class="text-gray-800">${esc(w.orderDept)||'-'}</b>
+                                <span class="chain-arrow">▶</span>
                                 <span class="text-gray-500">시공:</span>
                                 <b class="${c.isSelf?'text-[#00529C]':'text-amber-700'}">${esc(displayContractor)}</b>
                                 <span class="chain-arrow">▶</span>
@@ -690,37 +718,20 @@
         renderWorkList();
     }
 
-    /* =========================================================
-       ★★★ D-안전소통보드 (오류 수정판) ★★★
-       ========================================================= */
-
-    /* 개선된 번호 파서:
-       - "1.", "1)", "1:" → 메인번호
-       - "1-1.", "1-1)", "1-1", "1-1 " (마침표 없어도) → 서브번호
-       - "1.1." → "1-1"로 정규화
-       - "* xxx" → 특수항목
-       - 번호 없는 줄 → 앞 항목에 이어붙임
-    */
+    /* ========= D-안전소통보드 (기존과 동일) ========= */
     function splitByNumber(text) {
         if (!text) return [];
         const lines = text.split(/\r?\n/);
         const items = [];
         let current = null;
-
-        // ★ 핵심 정규식: 마침표/괄호/콜론 없어도 매칭 (숫자[-숫자] 뒤 공백만 있어도 OK)
-        // 예: "1. xxx", "1-1. xxx", "1-1 xxx", "1-1) xxx", "1.1 xxx"
         const numRegex = /^(\d+(?:[-\.]\d+)?)\s*[\.\)\:]?\s+(.+)/;
         const starRegex = /^\*\s*(.*)/;
-
         for (let line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
-
             const m = trimmed.match(numRegex);
             const star = trimmed.match(starRegex);
-
             if (m) {
-                // 번호 정규화: "1.1" → "1-1"
                 let no = m[1].replace(/\./g, '-');
                 const content = (m[2] || '').trim();
                 if (current) items.push(current);
@@ -738,7 +749,6 @@
         return items;
     }
 
-    /* 번호 정렬용 파서: "1-2" → [1, 2] */
     function parseNoForSort(no) {
         if (no === '*') return [9999, 0];
         if (no === '-') return [9998, 0];
@@ -763,21 +773,15 @@
     }
 
     function downloadBoard(workId) {
-        if (typeof docx === 'undefined') {
-            alert('❌ 워드 생성 라이브러리 로드 중입니다. 잠시 후 다시 시도하세요.');
-            return;
-        }
+        if (typeof docx === 'undefined') { alert('❌ 라이브러리 로드 중입니다.'); return; }
         const w = WORK_DATA.find(x => x.id === workId);
         if (!w) { alert('❌ 작업 데이터를 찾을 수 없습니다.'); return; }
         try { buildBoardDocx(w); } 
-        catch(e){ console.error(e); alert('❌ 워드 생성 오류: ' + e.message); }
+        catch(e){ console.error(e); alert('❌ 오류: ' + e.message); }
     }
 
     function downloadAllBoards() {
-        if (typeof docx === 'undefined') {
-            alert('❌ 워드 생성 라이브러리 로드 중입니다. 잠시 후 다시 시도하세요.');
-            return;
-        }
+        if (typeof docx === 'undefined') { alert('❌ 라이브러리 로드 중입니다.'); return; }
         const filterRisk = document.getElementById('filterRisk').value;
         const keyword = document.getElementById('filterKeyword').value.trim().toLowerCase();
         let filtered = WORK_DATA;
@@ -789,67 +793,40 @@
             );
         }
         if(filtered.length === 0){ alert('❌ 다운로드할 작업이 없습니다.'); return; }
-        if(!confirm(`📄 총 ${filtered.length}건의 D-안전소통보드를 다운로드하시겠습니까?\n(개별 워드파일로 순차 저장됩니다)`)) return;
+        if(!confirm(`📄 총 ${filtered.length}건의 D-안전소통보드를 다운로드하시겠습니까?`)) return;
         filtered.forEach((w, i) => {
-            setTimeout(() => {
-                try { buildBoardDocx(w); } 
-                catch(e){ console.error('워드 생성 실패:', w.id, e); }
-            }, i * 400);
+            setTimeout(() => { try { buildBoardDocx(w); } catch(e){ console.error(e); } }, i * 400);
         });
     }
 
     function buildBoardDocx(w) {
         const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
                 WidthType, AlignmentType, HeightRule, VerticalAlign } = docx;
-
         const CELL_MARGIN = { top: 100, bottom: 100, left: 120, right: 120 };
-
         function cell(text, opts = {}) {
             const texts = Array.isArray(text) ? text : String(text).split('\n');
             return new TableCell({
                 shading: opts.shade ? { fill: "D9E2F3" } : undefined,
-                columnSpan: opts.span,
-                rowSpan: opts.rowSpan,
-                verticalAlign: VerticalAlign.CENTER,
-                margins: CELL_MARGIN,
+                columnSpan: opts.span, rowSpan: opts.rowSpan,
+                verticalAlign: VerticalAlign.CENTER, margins: CELL_MARGIN,
                 children: texts.map(t => new Paragraph({
                     alignment: opts.align || AlignmentType.LEFT,
                     spacing: { before: 30, after: 30, line: 280 },
-                    children: [new TextRun({
-                        text: String(t),
-                        bold: opts.bold || false,
-                        size: 20,
-                        font: FONT
-                    })]
+                    children: [new TextRun({ text: String(t), bold: opts.bold || false, size: 20, font: FONT })]
                 }))
             });
         }
-
         const d = {
-            일자: w.date || '',
-            운전공장: w.factory || '',
-            작업장소: w.location || '',
-            작업명: w.workName || '',
-            인원: parseInt(w.people) || 1,
-            작업시간: w.time || '',
-            협력사: w.vendor || '',
-            하도급: w.subVendor || '',
-            작업담당자: w.pfmSiteMgr || '',
-            협력사담당자: w.vendorSiteMgr || '',
-            잠재위험: w.hazard || '',
-            조치사항: w.action || '',
-            감시자소속: w.safetyMgrDept || '',
-            감시자이름: w.safetyMgrName || '',
+            일자: w.date || '', 운전공장: w.factory || '', 작업장소: w.location || '',
+            작업명: w.workName || '', 인원: parseInt(w.people) || 1, 작업시간: w.time || '',
+            협력사: w.vendor || '', 하도급: w.subVendor || '',
+            작업담당자: w.pfmSiteMgr || '', 협력사담당자: w.vendorSiteMgr || '',
+            잠재위험: w.hazard || '', 조치사항: w.action || '',
+            감시자소속: w.safetyMgrDept || '', 감시자이름: w.safetyMgrName || '',
             CCTV: w.cctv ? 'O' : 'X'
         };
-
         const risks = splitByNumber(d.잠재위험);
         const actions = splitByNumber(d.조치사항);
-
-        // ★★★ 개선된 매칭 로직 ★★★
-        // 1) 위험/조치의 모든 번호를 통합
-        // 2) 자연스러운 순서로 정렬 (1 → 1-1 → 1-2 → 2 → 2-1 → * 순)
-        // 3) 짝이 없는 항목도 빈칸으로라도 표시
         const allNosSet = new Set([...risks.map(r=>r.no), ...actions.map(a=>a.no)]);
         const allNos = [...allNosSet].sort((a, b) => {
             const [a1, a2] = parseNoForSort(a);
@@ -857,13 +834,10 @@
             if (a1 !== b1) return a1 - b1;
             return a2 - b2;
         });
-
         const rows = allNos.map(no => ({
-            no,
-            risk: (risks.find(x=>x.no===no)||{}).text || '',
+            no, risk: (risks.find(x=>x.no===no)||{}).text || '',
             action: (actions.find(x=>x.no===no)||{}).text || ''
         }));
-
         const 작업장소_통합 = mergeLocation(d.운전공장, d.작업장소);
         const 작업명_리스트 = splitJobNames(d.작업명);
         const 용역사표시 = d.하도급 && d.하도급 !== '없음' ? `${d.협력사} / ${d.하도급}` : d.협력사;
@@ -877,8 +851,7 @@
             columnWidths: [1150, 1400, 1600, 4700, 1150],
             rows: [
                 new TableRow({
-                    cantSplit: true, tableHeader: false,
-                    height: { value: 450, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
                     children: [
                         cell("일자", {shade:true, bold:true, align:AlignmentType.CENTER}),
                         cell("작업시간", {shade:true, bold:true, align:AlignmentType.CENTER}),
@@ -888,8 +861,7 @@
                     ]
                 }),
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 1100, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 1100, rule: HeightRule.ATLEAST },
                     children: [
                         cell(d.일자, {align:AlignmentType.CENTER}),
                         cell(d.작업시간, {align:AlignmentType.CENTER}),
@@ -900,14 +872,12 @@
                 }),
             ]
         });
-
         const infoTable2 = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [1400, 1600, 1600, 3800, 1600],
             rows: [
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 450, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
                     children: [
                         cell("작업담당자", {shade:true, bold:true, align:AlignmentType.CENTER}),
                         cell("용역사(수행사)", {shade:true, bold:true, align:AlignmentType.CENTER}),
@@ -917,8 +887,7 @@
                     ]
                 }),
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 550, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 550, rule: HeightRule.ATLEAST },
                     children: [
                         cell(d.작업담당자, {align:AlignmentType.CENTER}),
                         cell(용역사표시, {align:AlignmentType.CENTER}),
@@ -929,11 +898,9 @@
                 }),
             ]
         });
-
         const riskRows = [
             new TableRow({
-                tableHeader: true, cantSplit: true,
-                height: { value: 450, rule: HeightRule.ATLEAST },
+                tableHeader: true, cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
                 children: [
                     cell("No.", {shade:true, bold:true, align:AlignmentType.CENTER}),
                     cell("⚠ 잠재위험", {shade:true, bold:true, align:AlignmentType.CENTER}),
@@ -943,25 +910,20 @@
         ];
         rows.forEach(r => {
             riskRows.push(new TableRow({
-                cantSplit: true,
-                height: { value: 위험행높이, rule: HeightRule.ATLEAST },
+                cantSplit: true, height: { value: 위험행높이, rule: HeightRule.ATLEAST },
                 children: [
                     cell(r.no, {align:AlignmentType.CENTER, bold:true}),
-                    cell(r.risk),
-                    cell(r.action),
+                    cell(r.risk), cell(r.action),
                 ]
             }));
         });
         const riskTable = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [700, 4650, 4650],
-            rows: riskRows
+            columnWidths: [700, 4650, 4650], rows: riskRows
         });
-
         const signRows = [
             new TableRow({
-                tableHeader: true, cantSplit: true,
-                height: { value: 450, rule: HeightRule.ATLEAST },
+                tableHeader: true, cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
                 children: [
                     cell("No.", {shade:true, bold:true, align:AlignmentType.CENTER}),
                     cell("소속", {shade:true, bold:true, align:AlignmentType.CENTER}),
@@ -973,54 +935,43 @@
         ];
         for (let i = 1; i <= d.인원; i++) {
             signRows.push(new TableRow({
-                cantSplit: true,
-                height: { value: 서명행높이, rule: HeightRule.ATLEAST },
-                children: [
-                    cell(String(i), {align:AlignmentType.CENTER}),
-                    cell(""), cell(""), cell(""), cell("")
-                ]
+                cantSplit: true, height: { value: 서명행높이, rule: HeightRule.ATLEAST },
+                children: [ cell(String(i), {align:AlignmentType.CENTER}), cell(""), cell(""), cell(""), cell("") ]
             }));
         }
         const signTable = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [600, 2400, 1400, 1400, 4200],
-            rows: signRows
+            columnWidths: [600, 2400, 1400, 1400, 4200], rows: signRows
         });
-
         const 조치행높이 = 총인원 <= 10 ? 1700 : 1400;
         const finalTable = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [7000, 3000],
             rows: [
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 450, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
                     children: [
                         cell("종사자 의견에 대한 현장 조치 결과 (즉시 개선사항 기재)", {shade:true, bold:true, align:AlignmentType.CENTER}),
                         cell("용역사 현장소장 확인", {shade:true, bold:true, align:AlignmentType.CENTER}),
                     ]
                 }),
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 조치행높이, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 조치행높이, rule: HeightRule.ATLEAST },
                     children: [ cell(""), cell(["", "(서명)", ""], {align:AlignmentType.CENTER}) ]
                 }),
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 450, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
                     children: [
                         cell("종사자 의견에 대한 현장 조치 결과 (즉시 개선사항 기재)", {shade:true, bold:true, align:AlignmentType.CENTER}),
                         cell("현장소장 확인", {shade:true, bold:true, align:AlignmentType.CENTER}),
                     ]
                 }),
                 new TableRow({
-                    cantSplit: true,
-                    height: { value: 조치행높이, rule: HeightRule.ATLEAST },
+                    cantSplit: true, height: { value: 조치행높이, rule: HeightRule.ATLEAST },
                     children: [ cell(""), cell(["", "(서명)", ""], {align:AlignmentType.CENTER}) ]
                 }),
             ]
         });
-
         const 소제목 = (text) => new Paragraph({
             spacing: { before: 200, after: 100 }, keepNext: true,
             children: [new TextRun({ text, bold: true, size: 24, font: FONT })]
@@ -1029,21 +980,17 @@
             spacing: { before: 0, after: 0 },
             children: [new TextRun({ text: "", font: FONT, size: 12 })]
         });
-
         const doc = new Document({
             styles: { default: { document: { run: { font: FONT, size: 20 } } } },
             sections: [{
                 properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
                 children: [
                     new Paragraph({
-                        alignment: AlignmentType.CENTER,
-                        spacing: { after: 200 },
+                        alignment: AlignmentType.CENTER, spacing: { after: 200 },
                         children: [new TextRun({ text: "[ D-안전소통보드 및 종사자 의견 청취서 ]", bold: true, size: 32, font: FONT })]
                     }),
                     소제목("1. 작업 기본 정보"),
-                    infoTable1,
-                    빈줄(),
-                    infoTable2,
+                    infoTable1, 빈줄(), infoTable2,
                     소제목("2. 주요 작업순서별 잠재위험 및 안전 조치사항"),
                     new Paragraph({
                         spacing: { after: 100 }, keepNext: true,
@@ -1057,7 +1004,6 @@
                 ]
             }]
         });
-
         Packer.toBlob(doc).then(blob => {
             const safe = (작업장소_통합 || 'output').replace(/[\/\\:*?"<>|\n\r]/g,'_').substring(0, 50);
             const dateSafe = (d.일자 || '').replace(/[\/\-\.]/g, '');
