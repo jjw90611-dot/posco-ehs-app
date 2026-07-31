@@ -11,6 +11,11 @@
         summary { list-style: none; cursor: pointer; }
         summary::-webkit-details-marker { display: none; }
         .chain-arrow { color: #94a3b8; font-weight: 900; }
+        @keyframes trophy-shine {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .multiplier-badge { animation: trophy-shine 2s ease-in-out infinite; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-gray-800">
@@ -47,15 +52,27 @@
                 <i class="fa-solid fa-user-shield"></i>관리자 설정
             </h2>
 
+            <!-- ★ 무재해 설정: 시작일 + 1배수 기준 -->
             <div class="bg-white rounded-lg p-4 border border-amber-200 flex flex-wrap items-end gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-1">무재해 달성 시작일</label>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">
+                        <i class="fa-solid fa-calendar-day mr-1 text-emerald-600"></i>무재해 달성 시작일
+                    </label>
                     <input type="date" id="noAccidentStart" class="border border-gray-300 rounded px-3 py-2 text-sm">
                 </div>
-                <button onclick="saveNoAccidentDate()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded text-sm">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">
+                        <i class="fa-solid fa-trophy mr-1 text-amber-500"></i>무재해 1배수 기준 (일)
+                    </label>
+                    <input type="number" id="noAccidentBase" min="1" placeholder="예: 365" class="border border-gray-300 rounded px-3 py-2 text-sm w-32">
+                </div>
+                <button onclick="saveNoAccidentSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded text-sm">
                     <i class="fa-solid fa-save mr-1"></i>저장
                 </button>
-                <p class="text-xs text-gray-500 ml-2">※ 오늘 날짜와 자동으로 일수 계산됩니다</p>
+                <p class="text-xs text-gray-500 ml-2 flex-1 min-w-0">
+                    ※ 회사마다 무재해 배수 기준이 다릅니다 (예: 365일=1년 / 500일 / 1000일 등)<br>
+                    현재 <b class="text-emerald-700" id="hintCurrentDays">-</b>일 / 기준 <b class="text-amber-700" id="hintBaseDays">-</b>일 → <b class="text-[#00529C]" id="hintMultiplier">-</b>
+                </p>
             </div>
 
             <div class="bg-white rounded-lg p-4 border border-amber-200">
@@ -90,12 +107,29 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
+        <!-- KPI 6개 -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500">
-                <p class="text-[11px] font-bold text-gray-500 uppercase">무재해 달성</p>
-                <p class="text-2xl font-black text-emerald-600 mt-1"><span id="kpiNoAccident">-</span><span class="text-sm text-gray-600"> 일</span></p>
+            <!-- ★ 무재해 KPI (배수 뱃지 포함) -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-emerald-500 relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <p class="text-[11px] font-bold text-gray-500 uppercase">무재해 달성</p>
+                    <span id="kpiMultiplierBadge" class="hidden multiplier-badge bg-gradient-to-r from-amber-400 to-amber-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                        🏆 <span id="kpiMultiplierText">-</span>
+                    </span>
+                </div>
+                <div class="flex items-baseline gap-1.5 mt-1">
+                    <p class="text-2xl font-black text-emerald-600"><span id="kpiNoAccident">-</span><span class="text-sm text-gray-600"> 일</span></p>
+                </div>
                 <p class="text-[10px] text-gray-400 mt-0.5" id="kpiNoAccidentSince">시작일 미설정</p>
+                <!-- 배수 진행률 바 -->
+                <div id="kpiProgressWrap" class="hidden mt-1.5">
+                    <div class="w-full bg-slate-100 rounded-full h-1">
+                        <div id="kpiProgressBar" class="bg-gradient-to-r from-emerald-400 to-emerald-600 h-1 rounded-full transition-all" style="width:0%"></div>
+                    </div>
+                    <p class="text-[9px] text-gray-500 mt-0.5"><span id="kpiProgressText">-</span></p>
+                </div>
             </div>
+
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-[#00529C]">
                 <p class="text-[11px] font-bold text-gray-500 uppercase">금일 작업 현황</p>
                 <p class="text-2xl font-black text-[#00529C] mt-1"><span id="kpiTotalWork">0</span><span class="text-sm text-gray-600"> 건</span></p>
@@ -119,10 +153,11 @@
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-amber-500">
                 <p class="text-[11px] font-bold text-gray-500 uppercase">CCTV 미설치</p>
                 <p class="text-2xl font-black text-amber-600 mt-1"><span id="kpiNoCctv">0</span><span class="text-sm text-gray-600"> 건</span></p>
-                <p class="text-[10px] text-gray-400 mt-0.5"><span>모니터링 사각지대</span></p>
+                <p class="text-[10px] text-gray-400 mt-0.5">모니터링 사각지대</p>
             </div>
         </div>
 
+        <!-- 잠재위험 & 공사현장별 인원 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <h3 class="text-sm font-black text-gray-800 mb-3 flex items-center gap-2">
@@ -146,6 +181,7 @@
             </div>
         </div>
 
+        <!-- 작업 현황 카드 리스트 -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
@@ -168,6 +204,7 @@
             </div>
         </div>
 
+        <!-- 안전관리 핵심 솔루션 -->
         <div>
             <h2 class="text-lg font-black text-gray-800 mb-4 flex items-center space-x-2">
                 <i class="fa-solid fa-layer-group text-[#00529C]"></i>
@@ -207,9 +244,10 @@
 
     <script>
     const STORAGE_KEYS = {
-        noAccident: 'pfm_no_accident_start',
-        workData:   'pfm_work_data',
-        adminMode:  'pfm_admin_mode'
+        noAccident:     'pfm_no_accident_start',
+        noAccidentBase: 'pfm_no_accident_base',   // ★ 신규: 1배수 기준일
+        workData:       'pfm_work_data',
+        adminMode:      'pfm_admin_mode'
     };
     let WORK_DATA = [];
 
@@ -227,30 +265,104 @@
         }
     }
 
-    function saveNoAccidentDate(){
-        const val = document.getElementById('noAccidentStart').value;
-        if(!val){ alert('시작일을 선택하세요'); return; }
-        localStorage.setItem(STORAGE_KEYS.noAccident, val);
+    /* =========================================================
+       ★ 무재해 설정 (시작일 + 1배수 기준)
+       ========================================================= */
+    function saveNoAccidentSettings(){
+        const dateVal = document.getElementById('noAccidentStart').value;
+        const baseVal = document.getElementById('noAccidentBase').value;
+
+        if(!dateVal){ alert('무재해 시작일을 선택하세요'); return; }
+        if(!baseVal || parseInt(baseVal) < 1){ alert('1배수 기준일을 1 이상으로 입력하세요'); return; }
+
+        localStorage.setItem(STORAGE_KEYS.noAccident, dateVal);
+        localStorage.setItem(STORAGE_KEYS.noAccidentBase, baseVal);
         updateNoAccidentKPI();
-        alert('✅ 무재해 시작일 저장 완료');
+        alert(`✅ 저장 완료\n· 시작일: ${dateVal}\n· 1배수 기준: ${baseVal}일`);
     }
+
     function updateNoAccidentKPI(){
         const start = localStorage.getItem(STORAGE_KEYS.noAccident);
+        const base = parseInt(localStorage.getItem(STORAGE_KEYS.noAccidentBase)) || 0;
+
+        // 관리자 패널 입력칸에 저장값 반영
+        const inpDate = document.getElementById('noAccidentStart');
+        const inpBase = document.getElementById('noAccidentBase');
+        if(inpDate && start) inpDate.value = start;
+        if(inpBase && base) inpBase.value = base;
+
+        const badge = document.getElementById('kpiMultiplierBadge');
+        const badgeText = document.getElementById('kpiMultiplierText');
+        const progressWrap = document.getElementById('kpiProgressWrap');
+        const progressBar = document.getElementById('kpiProgressBar');
+        const progressText = document.getElementById('kpiProgressText');
+
         if(!start){
             document.getElementById('kpiNoAccident').textContent = '-';
             document.getElementById('kpiNoAccidentSince').textContent = '시작일 미설정';
+            badge.classList.add('hidden');
+            progressWrap.classList.add('hidden');
+            updateHint(0, base);
             return;
         }
-        const inp = document.getElementById('noAccidentStart');
-        if(inp) inp.value = start;
+
+        // 무재해 일수 계산
         const d1 = new Date(start);
         const d2 = new Date();
         const days = Math.floor((d2 - d1) / 86400000) + 1;
+
         document.getElementById('kpiNoAccident').textContent = days.toLocaleString();
         document.getElementById('kpiNoAccidentSince').textContent = `${start} ~`;
+
+        // 배수 계산
+        if(base > 0){
+            const multiplier = Math.floor(days / base);  // 달성한 배수 (내림)
+            const remainder = days % base;               // 다음 배수까지의 진행일수
+            const progressPct = Math.round((remainder / base) * 100);
+
+            if(multiplier >= 1){
+                // 배수 달성 상태
+                badge.classList.remove('hidden');
+                badgeText.textContent = `${multiplier}배수 달성`;
+                progressWrap.classList.remove('hidden');
+                progressBar.style.width = progressPct + '%';
+                progressText.textContent = `다음 ${multiplier+1}배수까지 ${(base-remainder).toLocaleString()}일 남음`;
+            } else {
+                // 아직 1배수 미달
+                badge.classList.remove('hidden');
+                badge.classList.remove('from-amber-400','to-amber-600');
+                badge.classList.add('from-slate-400','to-slate-500');
+                badgeText.textContent = `1배수 진행중`;
+                progressWrap.classList.remove('hidden');
+                progressBar.style.width = progressPct + '%';
+                progressText.textContent = `1배수까지 ${(base-remainder).toLocaleString()}일 남음`;
+            }
+            updateHint(days, base);
+        } else {
+            badge.classList.add('hidden');
+            progressWrap.classList.add('hidden');
+            updateHint(days, 0);
+        }
     }
 
-    /* 시공사 판정 */
+    function updateHint(days, base){
+        const h1 = document.getElementById('hintCurrentDays');
+        const h2 = document.getElementById('hintBaseDays');
+        const h3 = document.getElementById('hintMultiplier');
+        if(!h1) return;
+        h1.textContent = days > 0 ? days.toLocaleString() : '-';
+        h2.textContent = base > 0 ? base.toLocaleString() : '-';
+        if(days > 0 && base > 0){
+            const m = Math.floor(days/base);
+            h3.textContent = m >= 1 ? `🏆 ${m}배수 달성` : `⏳ 1배수 진행중 (${Math.round(days/base*100)}%)`;
+        } else {
+            h3.textContent = '-';
+        }
+    }
+
+    /* =========================================================
+       시공사 판정
+       ========================================================= */
     const POSCO_AFFILIATES_AS_CONTRACTOR = [
         '포스코이앤씨', '포스코이엔씨', '포스코E&C', '포스코EC', 'POSCOE&C'
     ];
@@ -271,6 +383,9 @@
         return { name: order, isSelf: false };
     }
 
+    /* =========================================================
+       TSV 파서
+       ========================================================= */
     function parseTSV(raw){
         const rows = [];
         let cur = []; let cell = ''; let inQuote = false;
@@ -397,6 +512,7 @@
     function exportJSON(){
         const data = {
             noAccidentStart: localStorage.getItem(STORAGE_KEYS.noAccident),
+            noAccidentBase: localStorage.getItem(STORAGE_KEYS.noAccidentBase),
             workData: WORK_DATA,
             exportedAt: new Date().toISOString()
         };
@@ -417,6 +533,7 @@
             try{
                 const data = JSON.parse(e.target.result);
                 if(data.noAccidentStart) localStorage.setItem(STORAGE_KEYS.noAccident, data.noAccidentStart);
+                if(data.noAccidentBase) localStorage.setItem(STORAGE_KEYS.noAccidentBase, data.noAccidentBase);
                 if(data.workData){
                     WORK_DATA = data.workData;
                     localStorage.setItem(STORAGE_KEYS.workData, JSON.stringify(WORK_DATA));
@@ -533,7 +650,6 @@
                 : '<span class="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded">🏗 외부시공</span>';
             const displayContractor = c.isSelf ? '포스코퓨처엠' : (w.orderDept || '-');
 
-            // ★ 가동상태: O이면 ✅, 그 외(X, 공백 등)는 ❌
             const opStatusMark = (w.opStatus||'').trim().toUpperCase()==='O' ? '✅' : '❌';
 
             return `
