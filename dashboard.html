@@ -6,7 +6,6 @@
     <title>포스코퓨처엠 - 통합안전 메인 대시보드</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ★ 워드 다운로드용 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
     <style>
@@ -23,7 +22,6 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-gray-800">
 
-    <!-- 상단 네비게이션 -->
     <nav class="bg-[#00529C] text-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
@@ -48,13 +46,11 @@
         </div>
     </nav>
 
-    <!-- 관리자 패널 -->
     <section id="adminPanel" class="hidden bg-amber-50 border-b-2 border-amber-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-4">
             <h2 class="text-base font-black text-amber-900 flex items-center gap-2">
                 <i class="fa-solid fa-user-shield"></i>관리자 설정
             </h2>
-
             <div class="bg-white rounded-lg p-4 border border-amber-200 flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs font-bold text-gray-600 mb-1">
@@ -76,7 +72,6 @@
                     현재 <b class="text-emerald-700" id="hintCurrentDays">-</b>일 / 기준 <b class="text-amber-700" id="hintBaseDays">-</b>일 → <b class="text-[#00529C]" id="hintMultiplier">-</b>
                 </p>
             </div>
-
             <div class="bg-white rounded-lg p-4 border border-amber-200">
                 <label class="block text-xs font-bold text-gray-600 mb-2">
                     <i class="fa-solid fa-table mr-1"></i>D-안전회의 엑셀 데이터 붙여넣기
@@ -128,7 +123,6 @@
                     <p class="text-[9px] text-gray-500 mt-0.5"><span id="kpiProgressText">-</span></p>
                 </div>
             </div>
-
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-[#00529C]">
                 <p class="text-[11px] font-bold text-gray-500 uppercase">금일 작업 현황</p>
                 <p class="text-2xl font-black text-[#00529C] mt-1"><span id="kpiTotalWork">0</span><span class="text-sm text-gray-600"> 건</span></p>
@@ -179,14 +173,12 @@
             </div>
         </div>
 
-        <!-- ★ 작업 현황 카드 리스트 (D-안전소통보드 다운로드 통합) -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
                     <i class="fa-solid fa-clipboard-list text-[#00529C]"></i>금일 작업 상세 현황
                 </h3>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <!-- ★ 전체 D-안전소통보드 일괄 다운로드 -->
                     <button onclick="downloadAllBoards()" id="downloadAllBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1" title="현재 필터된 모든 작업의 D-안전소통보드를 개별 워드파일로 일괄 다운로드">
                         <i class="fa-solid fa-file-word"></i>
                         <span>전체 소통보드 다운로드</span>
@@ -268,7 +260,6 @@
         }
     }
 
-    /* ========= 무재해 ========= */
     function saveNoAccidentSettings(){
         const dateVal = document.getElementById('noAccidentStart').value;
         const baseVal = document.getElementById('noAccidentBase').value;
@@ -351,7 +342,6 @@
         }
     }
 
-    /* ========= 시공사 판정 ========= */
     const POSCO_AFFILIATES_AS_CONTRACTOR = [
         '포스코이앤씨', '포스코이엔씨', '포스코E&C', '포스코EC', 'POSCOE&C'
     ];
@@ -372,7 +362,6 @@
         return { name: order, isSelf: false };
     }
 
-    /* ========= TSV 파서 ========= */
     function parseTSV(raw){
         const rows = [];
         let cur = []; let cell = ''; let inQuote = false;
@@ -660,7 +649,6 @@
                             ${risks.length?`<div class="flex flex-wrap gap-1 mt-2">${risks.join('')}</div>`:''}
                         </div>
                         <div class="flex flex-col items-end gap-2">
-                            <!-- ★ 개별 D-안전소통보드 다운로드 버튼 -->
                             <button onclick="event.preventDefault();event.stopPropagation();downloadBoard('${w.id}')" 
                                 class="bg-[#00529C] hover:bg-blue-900 text-white text-[10px] font-bold px-2.5 py-1.5 rounded transition flex items-center gap-1 shadow-sm whitespace-nowrap"
                                 title="이 작업의 D-안전소통보드를 워드파일로 다운로드">
@@ -703,30 +691,59 @@
     }
 
     /* =========================================================
-       ★★★ D-안전소통보드 워드 다운로드 로직 ★★★
+       ★★★ D-안전소통보드 (오류 수정판) ★★★
        ========================================================= */
 
+    /* 개선된 번호 파서:
+       - "1.", "1)", "1:" → 메인번호
+       - "1-1.", "1-1)", "1-1", "1-1 " (마침표 없어도) → 서브번호
+       - "1.1." → "1-1"로 정규화
+       - "* xxx" → 특수항목
+       - 번호 없는 줄 → 앞 항목에 이어붙임
+    */
     function splitByNumber(text) {
         if (!text) return [];
         const lines = text.split(/\r?\n/);
         const items = [];
         let current = null;
+
+        // ★ 핵심 정규식: 마침표/괄호/콜론 없어도 매칭 (숫자[-숫자] 뒤 공백만 있어도 OK)
+        // 예: "1. xxx", "1-1. xxx", "1-1 xxx", "1-1) xxx", "1.1 xxx"
+        const numRegex = /^(\d+(?:[-\.]\d+)?)\s*[\.\)\:]?\s+(.+)/;
+        const starRegex = /^\*\s*(.*)/;
+
         for (let line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
-            const m = trimmed.match(/^(\d+(?:-\d+)?)\.\s*(.*)/);
-            const star = trimmed.match(/^\*\s*(.*)/);
+
+            const m = trimmed.match(numRegex);
+            const star = trimmed.match(starRegex);
+
             if (m) {
+                // 번호 정규화: "1.1" → "1-1"
+                let no = m[1].replace(/\./g, '-');
+                const content = (m[2] || '').trim();
                 if (current) items.push(current);
-                current = { no: m[1], text: m[2] };
+                current = { no, text: content };
             } else if (star) {
                 if (current) items.push(current);
                 current = { no: '*', text: star[1] };
-            } else if (current) current.text += ' ' + trimmed;
-            else current = { no: '-', text: trimmed };
+            } else if (current) {
+                current.text += ' ' + trimmed;
+            } else {
+                current = { no: '-', text: trimmed };
+            }
         }
         if (current) items.push(current);
         return items;
+    }
+
+    /* 번호 정렬용 파서: "1-2" → [1, 2] */
+    function parseNoForSort(no) {
+        if (no === '*') return [9999, 0];
+        if (no === '-') return [9998, 0];
+        const parts = String(no).split('-').map(x => parseInt(x) || 0);
+        return [parts[0] || 0, parts[1] || 0];
     }
 
     function mergeLocation(plant, place) {
@@ -752,12 +769,8 @@
         }
         const w = WORK_DATA.find(x => x.id === workId);
         if (!w) { alert('❌ 작업 데이터를 찾을 수 없습니다.'); return; }
-        try {
-            buildBoardDocx(w);
-        } catch(e) {
-            console.error(e);
-            alert('❌ 워드 생성 오류: ' + e.message);
-        }
+        try { buildBoardDocx(w); } 
+        catch(e){ console.error(e); alert('❌ 워드 생성 오류: ' + e.message); }
     }
 
     function downloadAllBoards() {
@@ -765,7 +778,6 @@
             alert('❌ 워드 생성 라이브러리 로드 중입니다. 잠시 후 다시 시도하세요.');
             return;
         }
-        // 현재 필터 상태의 작업 리스트
         const filterRisk = document.getElementById('filterRisk').value;
         const keyword = document.getElementById('filterKeyword').value.trim().toLowerCase();
         let filtered = WORK_DATA;
@@ -778,8 +790,6 @@
         }
         if(filtered.length === 0){ alert('❌ 다운로드할 작업이 없습니다.'); return; }
         if(!confirm(`📄 총 ${filtered.length}건의 D-안전소통보드를 다운로드하시겠습니까?\n(개별 워드파일로 순차 저장됩니다)`)) return;
-
-        // 브라우저가 여러 파일을 동시에 저장할 때 막지 않도록 순차 지연
         filtered.forEach((w, i) => {
             setTimeout(() => {
                 try { buildBoardDocx(w); } 
@@ -815,7 +825,6 @@
             });
         }
 
-        // WORK_DATA에서 값 매핑
         const d = {
             일자: w.date || '',
             운전공장: w.factory || '',
@@ -836,7 +845,19 @@
 
         const risks = splitByNumber(d.잠재위험);
         const actions = splitByNumber(d.조치사항);
-        const allNos = [...new Set([...risks.map(r=>r.no), ...actions.map(a=>a.no)])];
+
+        // ★★★ 개선된 매칭 로직 ★★★
+        // 1) 위험/조치의 모든 번호를 통합
+        // 2) 자연스러운 순서로 정렬 (1 → 1-1 → 1-2 → 2 → 2-1 → * 순)
+        // 3) 짝이 없는 항목도 빈칸으로라도 표시
+        const allNosSet = new Set([...risks.map(r=>r.no), ...actions.map(a=>a.no)]);
+        const allNos = [...allNosSet].sort((a, b) => {
+            const [a1, a2] = parseNoForSort(a);
+            const [b1, b2] = parseNoForSort(b);
+            if (a1 !== b1) return a1 - b1;
+            return a2 - b2;
+        });
+
         const rows = allNos.map(no => ({
             no,
             risk: (risks.find(x=>x.no===no)||{}).text || '',
@@ -1001,8 +1022,7 @@
         });
 
         const 소제목 = (text) => new Paragraph({
-            spacing: { before: 200, after: 100 },
-            keepNext: true,
+            spacing: { before: 200, after: 100 }, keepNext: true,
             children: [new TextRun({ text, bold: true, size: 24, font: FONT })]
         });
         const 빈줄 = () => new Paragraph({
