@@ -68,7 +68,6 @@
                     <i class="fa-solid fa-save mr-1"></i>저장
                 </button>
                 <p class="text-xs text-gray-500 ml-2 flex-1 min-w-0">
-                    ※ 회사마다 무재해 배수 기준이 다릅니다 (예: 365일=1년 / 500일 / 1000일 등)<br>
                     현재 <b class="text-emerald-700" id="hintCurrentDays">-</b>일 / 기준 <b class="text-amber-700" id="hintBaseDays">-</b>일 → <b class="text-[#00529C]" id="hintMultiplier">-</b>
                 </p>
             </div>
@@ -78,10 +77,10 @@
                 </label>
                 <p class="text-[11px] text-gray-500 mb-2">
                     엑셀에서 <b>헤더 포함 통째로 복사</b>해도 OK. 헤더 행은 자동으로 스킵됩니다.<br>
-                    ※ 셀 안 개행(줄바꿈)이 있는 데이터도 정상 처리됩니다.<br>
-                    <b class="text-emerald-700">🏭 자체시공 판정</b>: 작업지시부서가 <b>포스코이앤씨/이엔씨/E&C</b>가 아닌 모든 경우 (팀/실/그룹/섹션 포함)
+                    ※ 인원 필드: <b>"47"</b>=주간만 / <b>"주 53<br>야 47"</b>=주야 교대 자동 인식<br>
+                    🏭 자체시공 판정: 작업지시부서가 <b>포스코이앤씨/이엔씨/E&C</b>가 아닌 모든 경우
                 </p>
-                <textarea id="excelPaste" rows="6" placeholder="7/31&#9;1&#9;X&#9;포스코투자엔지니어링실&#9;..." 
+                <textarea id="excelPaste" rows="6" placeholder="7/31&#9;1&#9;X&#9;..." 
                     class="w-full border border-gray-300 rounded px-3 py-2 text-xs font-mono resize-y focus:outline-none focus:border-amber-500"></textarea>
                 <div class="flex flex-wrap gap-2 mt-3">
                     <button onclick="parseAndApply()" class="bg-[#00529C] hover:bg-blue-900 text-white font-bold px-4 py-2 rounded text-sm">
@@ -134,10 +133,13 @@
                 <p class="text-2xl font-black text-rose-600 mt-1"><span id="kpiHighRisk">0</span><span class="text-sm text-gray-600"> 건</span></p>
                 <p class="text-[10px] text-gray-400 mt-0.5"><span id="kpiHighRiskPct">0</span>% 비중</p>
             </div>
+            <!-- ★ 총 작업인원 KPI: 주/야 분리 표시 -->
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-indigo-500">
                 <p class="text-[11px] font-bold text-gray-500 uppercase">총 작업인원</p>
                 <p class="text-2xl font-black text-indigo-600 mt-1"><span id="kpiTotalPeople">0</span><span class="text-sm text-gray-600"> 명</span></p>
-                <p class="text-[10px] text-gray-400 mt-0.5"><span id="kpiVendorCount">0</span>개 용역사</p>
+                <p class="text-[10px] text-gray-500 mt-0.5" id="kpiDayNight">
+                    ☀ 주간 <b class="text-indigo-700"><span id="kpiDayPeople">0</span></b>명 · 🌙 야간 <b class="text-purple-700"><span id="kpiNightPeople">0</span></b>명
+                </p>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-teal-500">
                 <p class="text-[11px] font-bold text-gray-500 uppercase">등록 MSDS</p>
@@ -180,7 +182,7 @@
                     <i class="fa-solid fa-clipboard-list text-[#00529C]"></i>금일 작업 상세 현황
                 </h3>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="downloadAllBoards()" id="downloadAllBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1" title="현재 필터된 모든 작업의 D-안전소통보드를 개별 워드파일로 일괄 다운로드">
+                    <button onclick="downloadAllBoards()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1">
                         <i class="fa-solid fa-file-word"></i>
                         <span>전체 소통보드 다운로드</span>
                     </button>
@@ -343,45 +345,65 @@
         }
     }
 
-    /* =========================================================
-       ★★★ 시공사 판정 로직 (재설계) ★★★
-       원리:
-       - 모든 작업은 기본적으로 포스코퓨처엠이 시공
-       - 단, 작업지시부서(orderDept)가 '포스코이앤씨' 계열이면 → 외부시공
-       
-       예시:
-       - 전기로건설TF팀 → 자체시공 (포스코 부서)
-       - TA Project팀, 조업안전섹션, 설비관리그룹, VGOFCC TA팀 → 자체시공
-       - 포스코 → 자체시공
-       - 포스코이앤씨 / 포스코이엔씨 / 포스코E&C → 외부시공
-       ========================================================= */
+    /* ========= 시공사 판정 (재설계) ========= */
     const EXTERNAL_CONTRACTORS = [
-        '포스코이앤씨',
-        '포스코이엔씨',
-        '포스코E&C',
-        '포스코EC',
-        'POSCOE&C',
-        'POSCOENC'
+        '포스코이앤씨','포스코이엔씨','포스코E&C','포스코EC','POSCOE&C','POSCOENC'
     ];
-
-    function normalizeName(s){ 
-        return (s||'').trim().replace(/\s+/g,'').toUpperCase(); 
-    }
-
+    function normalizeName(s){ return (s||'').trim().replace(/\s+/g,'').toUpperCase(); }
     function isExternalContractor(orderDept){
         const t = normalizeName(orderDept);
         if(!t) return false;
         return EXTERNAL_CONTRACTORS.some(ec => t === normalizeName(ec));
     }
-
     function getContractor(w){
         const order = (w.orderDept||'').trim();
-        // 작업지시부서 미지정 → 기본은 자체시공
         if(!order) return { name: '포스코퓨처엠', isSelf: true };
-        // 포스코이앤씨 계열만 외부시공
         if(isExternalContractor(order)) return { name: order, isSelf: false };
-        // 그 외 모든 부서(팀/실/그룹/섹션 등) → 자체시공
         return { name: '포스코퓨처엠', isSelf: true };
+    }
+
+    /* =========================================================
+       ★★★ 주간/야간 인원 파서 ★★★
+       입력 케이스:
+       - "47"                    → {day:47, night:0, total:47, hasShift:false}
+       - "주 53\n야 47"           → {day:53, night:47, total:100, hasShift:true}
+       - "주53야47"               → 동일
+       - "53(주) 47(야)"          → 동일
+       - "주간 53 야간 47"        → 동일
+       ========================================================= */
+    function parseWorkforce(rawText) {
+        const raw = String(rawText||'').trim();
+        if (!raw) return { day: 0, night: 0, total: 0, hasShift: false, raw };
+
+        // 단순 숫자만 있는 경우
+        const simpleNum = raw.match(/^\d+$/);
+        if (simpleNum) {
+            const n = parseInt(raw);
+            return { day: n, night: 0, total: n, hasShift: false, raw };
+        }
+
+        // 주간 패턴: "주" 또는 "주간" 뒤에 숫자
+        const dayMatch = raw.match(/주\s*간?\s*[:：]?\s*(\d+)|(\d+)\s*\(?\s*주\s*간?\s*\)?/);
+        // 야간 패턴: "야" 또는 "야간" 뒤에 숫자
+        const nightMatch = raw.match(/야\s*간?\s*[:：]?\s*(\d+)|(\d+)\s*\(?\s*야\s*간?\s*\)?/);
+
+        const day = dayMatch ? parseInt(dayMatch[1] || dayMatch[2]) : 0;
+        const night = nightMatch ? parseInt(nightMatch[1] || nightMatch[2]) : 0;
+
+        if (day > 0 || night > 0) {
+            return { 
+                day, 
+                night, 
+                total: day + night, 
+                hasShift: (day > 0 && night > 0),  // 주야 모두 있어야 교대
+                raw 
+            };
+        }
+
+        // fallback: 숫자 첫 번째만 추출
+        const anyNum = raw.match(/(\d+)/);
+        const n = anyNum ? parseInt(anyNum[1]) : 0;
+        return { day: n, night: 0, total: n, hasShift: false, raw };
     }
 
     /* ========= TSV 파서 ========= */
@@ -427,7 +449,8 @@
         const c8 = (cells[8]||'').trim();
         const dateOk = /^\d{1,4}[\/\-\.]\d{1,2}([\/\-\.]\d{1,4})?$/.test(c0);
         const noOk = /^\d+$/.test(c1);
-        const peopleOk = /^\d+$/.test(c8);
+        // 인원 필드는 "주53 야47" 형태도 유효하도록 완화
+        const peopleOk = /\d/.test(c8);
         return (dateOk?1:0) + (noOk?1:0) + (peopleOk?1:0) >= 2;
     }
 
@@ -447,6 +470,10 @@
             if(isHeaderRow(cells)){ skip++; return; }
             if(!isValidDataRow(cells)){ skip++; return; }
             const isO = v => (v||'').trim().toUpperCase() === 'O';
+
+            // ★ 인원 파싱: 주/야 분리
+            const wf = parseWorkforce(cells[8]);
+
             parsed.push({
                 id: 'w' + Date.now() + '_' + idx,
                 date:          (cells[0]||'').trim(),
@@ -457,7 +484,11 @@
                 orderDept:     (cells[5]||'').trim(),
                 location:      (cells[6]||'').trim().replace(/^\n+/,''),
                 workName:      (cells[7]||'').trim(),
-                people:        parseInt(cells[8]) || 0,
+                peopleRaw:     (cells[8]||'').trim(),  // ★ 원본 보관
+                peopleDay:     wf.day,                  // ★ 주간
+                peopleNight:   wf.night,                // ★ 야간
+                people:        wf.total,                // ★ 총합 (하위호환)
+                hasShift:      wf.hasShift,             // ★ 교대여부 플래그
                 time:          (cells[9]||'').trim(),
                 vendor:        (cells[10]||'').trim(),
                 subVendor:     (cells[11]||'').trim(),
@@ -490,7 +521,8 @@
         localStorage.setItem(STORAGE_KEYS.workData, JSON.stringify(WORK_DATA));
         const selfCount = parsed.filter(w => getContractor(w).isSelf).length;
         const extCount = parsed.length - selfCount;
-        resultEl.textContent = `✅ ${parsed.length}건 반영 (자체 ${selfCount}건 / 외부 ${extCount}건)${skip?` · ${skip}행 스킵`:''}`;
+        const shiftCount = parsed.filter(w => w.hasShift).length;
+        resultEl.textContent = `✅ ${parsed.length}건 (자체 ${selfCount} / 외부 ${extCount} · 주야교대 ${shiftCount}건)${skip?` · ${skip}행 스킵`:''}`;
         resultEl.className = 'ml-2 self-center text-sm font-bold text-emerald-600';
         renderAll();
     }
@@ -543,15 +575,22 @@
     function updateKPI(){
         const total = WORK_DATA.length;
         const high = WORK_DATA.filter(w=>w.highRisk).length;
-        const people = WORK_DATA.reduce((s,w)=>s + (parseInt(w.people)||0), 0);
+
+        // ★ 주간/야간 별도 합산
+        const dayPeople = WORK_DATA.reduce((s,w)=>s + (parseInt(w.peopleDay)||0), 0);
+        const nightPeople = WORK_DATA.reduce((s,w)=>s + (parseInt(w.peopleNight)||0), 0);
+        const totalPeople = dayPeople + nightPeople;
+
         const vendors = new Set(WORK_DATA.map(w=>w.vendor).filter(v=>v && v!=='없음')).size;
         const noCctv = WORK_DATA.filter(w=>!w.cctv).length;
         const dates = [...new Set(WORK_DATA.map(w=>w.date).filter(Boolean))];
+
         document.getElementById('kpiTotalWork').textContent = total;
         document.getElementById('kpiHighRisk').textContent = high;
         document.getElementById('kpiHighRiskPct').textContent = total?Math.round(high/total*100):0;
-        document.getElementById('kpiTotalPeople').textContent = people.toLocaleString();
-        document.getElementById('kpiVendorCount').textContent = vendors;
+        document.getElementById('kpiTotalPeople').textContent = totalPeople.toLocaleString();
+        document.getElementById('kpiDayPeople').textContent = dayPeople.toLocaleString();
+        document.getElementById('kpiNightPeople').textContent = nightPeople.toLocaleString();
         document.getElementById('kpiNoCctv').textContent = noCctv;
         document.getElementById('kpiWorkDate').textContent = dates.length?dates.join(', '):'-';
         document.getElementById('riskFire').textContent = WORK_DATA.filter(w=>w.fire).length;
@@ -584,21 +623,26 @@
         const grp = {};
         WORK_DATA.forEach(w=>{
             const key = w.factory || w.location || '기타';
-            if(!grp[key]) grp[key] = { people:0, works:0 };
-            grp[key].people += parseInt(w.people)||0;
+            if(!grp[key]) grp[key] = { day:0, night:0, works:0 };
+            grp[key].day += parseInt(w.peopleDay)||0;
+            grp[key].night += parseInt(w.peopleNight)||0;
             grp[key].works += 1;
         });
-        const sorted = Object.entries(grp).sort((a,b)=>b[1].people-a[1].people);
-        const maxPeople = sorted[0]?.[1].people || 1;
+        const sorted = Object.entries(grp).sort((a,b)=>(b[1].day+b[1].night)-(a[1].day+a[1].night));
+        const maxPeople = (sorted[0]?.[1].day + sorted[0]?.[1].night) || 1;
         box.innerHTML = sorted.map(([site,info])=>{
-            const pct = Math.round(info.people/maxPeople*100);
+            const total = info.day + info.night;
+            const pct = Math.round(total/maxPeople*100);
+            const shiftInfo = info.night > 0 
+                ? `<span class="text-[10px] text-purple-600 ml-1">(☀${info.day}/🌙${info.night})</span>` 
+                : '';
             return `
             <div class="flex items-center gap-2 text-xs">
                 <span class="w-32 truncate font-semibold text-gray-700" title="${esc(site)}">${esc(site)}</span>
                 <div class="flex-1 bg-slate-100 rounded-full h-4 relative overflow-hidden">
                     <div class="bg-[#00529C] h-full rounded-full" style="width:${pct}%"></div>
                 </div>
-                <span class="font-bold text-[#00529C] w-16 text-right">${info.people}명</span>
+                <span class="font-bold text-[#00529C] w-24 text-right">${total}명${shiftInfo}</span>
                 <span class="text-gray-400 w-10 text-right">${info.works}건</span>
             </div>`;
         }).join('');
@@ -638,6 +682,12 @@
             const displayContractor = c.isSelf ? '포스코퓨처엠' : (w.orderDept || '-');
             const opStatusMark = (w.opStatus||'').trim().toUpperCase()==='O' ? '✅' : '❌';
 
+            // ★ 인원 표시 (교대 여부에 따라)
+            const peopleDisplay = w.hasShift
+                ? `<b>${w.people}명</b> <span class="text-purple-700">(☀${w.peopleDay}/🌙${w.peopleNight})</span>`
+                : `<b>${w.people}명</b>`;
+            const shiftBadge = w.hasShift ? '<span class="bg-purple-500 text-white text-[10px] font-black px-2 py-0.5 rounded">🌙 주야교대</span>' : '';
+
             return `
             <details class="border ${w.highRisk?'border-rose-200 bg-rose-50/30':'border-gray-200 bg-white'} rounded-lg">
                 <summary class="p-4">
@@ -646,6 +696,7 @@
                             <div class="flex items-center gap-2 flex-wrap mb-1.5">
                                 ${w.highRisk?'<span class="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">⚠ 고위험</span>':'<span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">일반</span>'}
                                 ${contractorBadge}
+                                ${shiftBadge}
                                 <span class="text-[11px] text-gray-500">${esc(w.date)} · NO.${esc(w.no)}</span>
                                 <span class="text-[11px] text-gray-500">📍 ${esc(w.factory||w.location)}</span>
                                 ${!w.cctv?'<span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded">📹 CCTV없음</span>':''}
@@ -666,7 +717,7 @@
                             </div>
                             <p class="text-sm font-black text-gray-900">${esc(w.workName)}</p>
                             <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-600 mt-1.5">
-                                <span><i class="fa-solid fa-users mr-1 text-gray-400"></i><b>${w.people}명</b></span>
+                                <span><i class="fa-solid fa-users mr-1 text-gray-400"></i>${peopleDisplay}</span>
                                 <span><i class="fa-solid fa-clock mr-1 text-gray-400"></i>${esc(w.time)}</span>
                             </div>
                             <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-600 mt-0.5">
@@ -718,7 +769,7 @@
         renderWorkList();
     }
 
-    /* ========= D-안전소통보드 (기존과 동일) ========= */
+    /* ========= D-안전소통보드 ========= */
     function splitByNumber(text) {
         if (!text) return [];
         const lines = text.split(/\r?\n/);
@@ -748,14 +799,12 @@
         if (current) items.push(current);
         return items;
     }
-
     function parseNoForSort(no) {
         if (no === '*') return [9999, 0];
         if (no === '-') return [9998, 0];
         const parts = String(no).split('-').map(x => parseInt(x) || 0);
         return [parts[0] || 0, parts[1] || 0];
     }
-
     function mergeLocation(plant, place) {
         const norm = s => (s || '').replace(/\s+/g, '').trim();
         if (!plant) return place || '';
@@ -763,7 +812,6 @@
         if (norm(plant) === norm(place)) return plant;
         return plant + " / " + place;
     }
-
     function splitJobNames(text) {
         if (!text) return [''];
         const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
@@ -779,7 +827,6 @@
         try { buildBoardDocx(w); } 
         catch(e){ console.error(e); alert('❌ 오류: ' + e.message); }
     }
-
     function downloadAllBoards() {
         if (typeof docx === 'undefined') { alert('❌ 라이브러리 로드 중입니다.'); return; }
         const filterRisk = document.getElementById('filterRisk').value;
@@ -806,25 +853,46 @@
         function cell(text, opts = {}) {
             const texts = Array.isArray(text) ? text : String(text).split('\n');
             return new TableCell({
-                shading: opts.shade ? { fill: "D9E2F3" } : undefined,
+                shading: opts.shade ? { fill: opts.shadeColor || "D9E2F3" } : undefined,
                 columnSpan: opts.span, rowSpan: opts.rowSpan,
                 verticalAlign: VerticalAlign.CENTER, margins: CELL_MARGIN,
                 children: texts.map(t => new Paragraph({
                     alignment: opts.align || AlignmentType.LEFT,
                     spacing: { before: 30, after: 30, line: 280 },
-                    children: [new TextRun({ text: String(t), bold: opts.bold || false, size: 20, font: FONT })]
+                    children: [new TextRun({ 
+                        text: String(t), 
+                        bold: opts.bold || false, 
+                        size: opts.size || 20, 
+                        font: FONT,
+                        color: opts.color || "000000"
+                    })]
                 }))
             });
         }
+
+        // ★ 인원 처리: 주간/야간 분리
+        const dayPeople = parseInt(w.peopleDay) || 0;
+        const nightPeople = parseInt(w.peopleNight) || 0;
+        const totalPeople = dayPeople + nightPeople || parseInt(w.people) || 1;
+        const hasShift = w.hasShift && nightPeople > 0;
+
         const d = {
-            일자: w.date || '', 운전공장: w.factory || '', 작업장소: w.location || '',
-            작업명: w.workName || '', 인원: parseInt(w.people) || 1, 작업시간: w.time || '',
-            협력사: w.vendor || '', 하도급: w.subVendor || '',
-            작업담당자: w.pfmSiteMgr || '', 협력사담당자: w.vendorSiteMgr || '',
-            잠재위험: w.hazard || '', 조치사항: w.action || '',
-            감시자소속: w.safetyMgrDept || '', 감시자이름: w.safetyMgrName || '',
+            일자: w.date || '',
+            운전공장: w.factory || '',
+            작업장소: w.location || '',
+            작업명: w.workName || '',
+            작업시간: w.time || '',
+            협력사: w.vendor || '',
+            하도급: w.subVendor || '',
+            작업담당자: w.pfmSiteMgr || '',
+            협력사담당자: w.vendorSiteMgr || '',
+            잠재위험: w.hazard || '',
+            조치사항: w.action || '',
+            감시자소속: w.safetyMgrDept || '',
+            감시자이름: w.safetyMgrName || '',
             CCTV: w.cctv ? 'O' : 'X'
         };
+
         const risks = splitByNumber(d.잠재위험);
         const actions = splitByNumber(d.조치사항);
         const allNosSet = new Set([...risks.map(r=>r.no), ...actions.map(a=>a.no)]);
@@ -838,12 +906,18 @@
             no, risk: (risks.find(x=>x.no===no)||{}).text || '',
             action: (actions.find(x=>x.no===no)||{}).text || ''
         }));
+
         const 작업장소_통합 = mergeLocation(d.운전공장, d.작업장소);
         const 작업명_리스트 = splitJobNames(d.작업명);
         const 용역사표시 = d.하도급 && d.하도급 !== '없음' ? `${d.협력사} / ${d.하도급}` : d.협력사;
+
+        // ★ 인원 표시 문자열
+        const 인원표시 = hasShift 
+            ? `총 ${totalPeople}명\n(주간 ${dayPeople} / 야간 ${nightPeople})`
+            : `${totalPeople}명`;
+
         const 총항목 = rows.length;
-        const 총인원 = d.인원;
-        const 서명행높이 = 총인원 <= 8 ? 1100 : (총인원 <= 15 ? 850 : (총인원 <= 22 ? 700 : 600));
+        const 서명행높이 = totalPeople <= 8 ? 1100 : (totalPeople <= 15 ? 850 : (totalPeople <= 22 ? 700 : 600));
         const 위험행높이 = 총항목 <= 6 ? 900 : (총항목 <= 10 ? 750 : 650);
 
         const infoTable1 = new Table({
@@ -867,11 +941,12 @@
                         cell(d.작업시간, {align:AlignmentType.CENTER}),
                         cell(작업장소_통합, {align:AlignmentType.CENTER}),
                         cell(작업명_리스트),
-                        cell(d.인원 + "명", {align:AlignmentType.CENTER}),
+                        cell(인원표시, {align:AlignmentType.CENTER, bold:hasShift}),
                     ]
                 }),
             ]
         });
+
         const infoTable2 = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [1400, 1600, 1600, 3800, 1600],
@@ -898,6 +973,7 @@
                 }),
             ]
         });
+
         const riskRows = [
             new TableRow({
                 tableHeader: true, cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
@@ -921,6 +997,8 @@
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [700, 4650, 4650], rows: riskRows
         });
+
+        /* ★★★ 서명란: 주간/야간 분리 ★★★ */
         const signRows = [
             new TableRow({
                 tableHeader: true, cantSplit: true, height: { value: 450, rule: HeightRule.ATLEAST },
@@ -933,17 +1011,85 @@
                 ]
             })
         ];
-        for (let i = 1; i <= d.인원; i++) {
+
+        if (hasShift) {
+            // 주간 헤더
             signRows.push(new TableRow({
-                cantSplit: true, height: { value: 서명행높이, rule: HeightRule.ATLEAST },
-                children: [ cell(String(i), {align:AlignmentType.CENTER}), cell(""), cell(""), cell(""), cell("") ]
+                cantSplit: true, height: { value: 400, rule: HeightRule.ATLEAST },
+                children: [
+                    new TableCell({
+                        shading: { fill: "FFF4CC" },  // 주간 = 노란색
+                        columnSpan: 5,
+                        verticalAlign: VerticalAlign.CENTER,
+                        margins: CELL_MARGIN,
+                        children: [new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [new TextRun({ 
+                                text: `☀ 주간작업자 (${dayPeople}명)`, 
+                                bold: true, size: 22, font: FONT, color: "B45309"
+                            })]
+                        })]
+                    })
+                ]
             }));
+            // 주간 서명행
+            for (let i = 1; i <= dayPeople; i++) {
+                signRows.push(new TableRow({
+                    cantSplit: true, height: { value: 서명행높이, rule: HeightRule.ATLEAST },
+                    children: [
+                        cell(String(i), {align:AlignmentType.CENTER}),
+                        cell(""), cell(""), cell(""), cell("")
+                    ]
+                }));
+            }
+            // 야간 헤더
+            signRows.push(new TableRow({
+                cantSplit: true, height: { value: 400, rule: HeightRule.ATLEAST },
+                children: [
+                    new TableCell({
+                        shading: { fill: "E0E7FF" },  // 야간 = 파란색
+                        columnSpan: 5,
+                        verticalAlign: VerticalAlign.CENTER,
+                        margins: CELL_MARGIN,
+                        children: [new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [new TextRun({ 
+                                text: `🌙 야간작업자 (${nightPeople}명)`, 
+                                bold: true, size: 22, font: FONT, color: "3730A3"
+                            })]
+                        })]
+                    })
+                ]
+            }));
+            // 야간 서명행
+            for (let i = 1; i <= nightPeople; i++) {
+                signRows.push(new TableRow({
+                    cantSplit: true, height: { value: 서명행높이, rule: HeightRule.ATLEAST },
+                    children: [
+                        cell(String(i), {align:AlignmentType.CENTER}),
+                        cell(""), cell(""), cell(""), cell("")
+                    ]
+                }));
+            }
+        } else {
+            // 주간만 (일반 케이스)
+            for (let i = 1; i <= totalPeople; i++) {
+                signRows.push(new TableRow({
+                    cantSplit: true, height: { value: 서명행높이, rule: HeightRule.ATLEAST },
+                    children: [
+                        cell(String(i), {align:AlignmentType.CENTER}),
+                        cell(""), cell(""), cell(""), cell("")
+                    ]
+                }));
+            }
         }
+
         const signTable = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [600, 2400, 1400, 1400, 4200], rows: signRows
         });
-        const 조치행높이 = 총인원 <= 10 ? 1700 : 1400;
+
+        const 조치행높이 = totalPeople <= 10 ? 1700 : 1400;
         const finalTable = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             columnWidths: [7000, 3000],
@@ -972,6 +1118,7 @@
                 }),
             ]
         });
+
         const 소제목 = (text) => new Paragraph({
             spacing: { before: 200, after: 100 }, keepNext: true,
             children: [new TextRun({ text, bold: true, size: 24, font: FONT })]
@@ -980,6 +1127,7 @@
             spacing: { before: 0, after: 0 },
             children: [new TextRun({ text: "", font: FONT, size: 12 })]
         });
+
         const doc = new Document({
             styles: { default: { document: { run: { font: FONT, size: 20 } } } },
             sections: [{
@@ -997,7 +1145,9 @@
                         children: [new TextRun({ text: "※ 관리감독자는 아래 사항을 작업자들에게 전파하고 지적확인을 실시해 주십시오.", size: 18, italics: true, font: FONT })]
                     }),
                     riskTable,
-                    소제목("3. 참석자 서명 및 종사자 의견 청취"),
+                    소제목(hasShift 
+                        ? `3. 참석자 서명 및 종사자 의견 청취 (☀주간 ${dayPeople}명 / 🌙야간 ${nightPeople}명)` 
+                        : "3. 참석자 서명 및 종사자 의견 청취"),
                     signTable,
                     소제목("4. 현장 조치 결과 및 확인 (현장소장 작성란)"),
                     finalTable,
