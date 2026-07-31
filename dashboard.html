@@ -24,28 +24,26 @@
                     <span class="bg-blue-800 text-xs px-2.5 py-1 rounded-full font-medium">EHS Portal</span>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <!-- 관리자 배지 (관리자로 로그인한 경우만 표시) -->
-                    <span id="adminBadge" class="hidden bg-amber-400 text-amber-900 text-xs font-black px-3 py-1 rounded-full">
-                        <i class="fa-solid fa-user-shield mr-1"></i>ADMIN
-                    </span>
-                    <div class="text-right hidden sm:block">
-                        <p class="text-sm font-bold" id="navUserName">-</p>
-                        <p class="text-xs text-blue-200" id="navUserDept">-</p>
-                    </div>
-                    <button onclick="logout()" class="bg-blue-800 hover:bg-blue-900 text-xs font-semibold px-3 py-2 rounded-lg border border-blue-600 transition flex items-center space-x-1">
-                        <i class="fa-solid fa-right-from-bracket"></i><span>로그아웃</span>
+                    <button onclick="toggleAdminMode()" id="adminBtn" class="bg-amber-500 hover:bg-amber-600 text-xs font-bold px-3 py-2 rounded-lg transition flex items-center space-x-1">
+                        <i class="fa-solid fa-user-shield"></i><span id="adminBtnText">관리자 모드</span>
                     </button>
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold" id="navUserName">조진우 안전관리자</p>
+                        <p class="text-xs text-blue-200" id="navUserDept">플랜트공사그룹</p>
+                    </div>
+                    <a href="index.html" class="bg-blue-800 hover:bg-blue-900 text-xs font-semibold px-3 py-2 rounded-lg border border-blue-600 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-right-from-bracket"></i><span>로그아웃</span>
+                    </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 관리자 패널 (admin 로그인 시 자동 표시) -->
+    <!-- 관리자 패널 -->
     <section id="adminPanel" class="hidden bg-amber-50 border-b-2 border-amber-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-4">
             <h2 class="text-base font-black text-amber-900 flex items-center gap-2">
-                <i class="fa-solid fa-user-shield"></i>관리자 설정 패널
-                <span class="text-xs font-normal text-amber-700 ml-2">※ 관리자 계정으로만 접근 가능</span>
+                <i class="fa-solid fa-user-shield"></i>관리자 설정
             </h2>
 
             <div class="bg-white rounded-lg p-4 border border-amber-200 flex flex-wrap items-end gap-3">
@@ -64,10 +62,10 @@
                     <i class="fa-solid fa-table mr-1"></i>D-안전회의 엑셀 데이터 붙여넣기
                 </label>
                 <p class="text-[11px] text-gray-500 mb-2">
-                    엑셀에서 <b>데이터 행만</b> 복사(Ctrl+C) → 아래 붙여넣기(Ctrl+V) → [파싱 & 반영] 클릭<br>
-                    ※ 헤더 행 제외, 일자~CCTV까지 30개 컬럼
+                    엑셀에서 <b>헤더 포함 통째로 복사</b>해도 OK. 헤더 행은 자동으로 스킵됩니다.<br>
+                    ※ 셀 안 개행(줄바꿈)이 있는 데이터도 정상 처리됩니다.
                 </p>
-                <textarea id="excelPaste" rows="6" placeholder="7/31&#9;1&#9;X&#9;포스코투자엔지니어링실&#9;2열연4가열로&#9;..." 
+                <textarea id="excelPaste" rows="6" placeholder="7/31&#9;1&#9;X&#9;포스코투자엔지니어링실&#9;..." 
                     class="w-full border border-gray-300 rounded px-3 py-2 text-xs font-mono resize-y focus:outline-none focus:border-amber-500"></textarea>
                 <div class="flex flex-wrap gap-2 mt-3">
                     <button onclick="parseAndApply()" class="bg-[#00529C] hover:bg-blue-900 text-white font-bold px-4 py-2 rounded text-sm">
@@ -149,7 +147,7 @@
             </div>
         </div>
 
-        <!-- 작업 현황 -->
+        <!-- 작업 현황 카드 리스트 -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h3 class="text-base font-black text-gray-800 flex items-center gap-2">
@@ -167,7 +165,7 @@
             <div id="workList" class="space-y-3">
                 <p class="text-sm text-gray-400 text-center py-8">
                     <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
-                    작업 데이터가 없습니다.
+                    작업 데이터가 없습니다. <b>관리자 모드</b>에서 엑셀 데이터를 붙여넣으세요.
                 </p>
             </div>
         </div>
@@ -211,54 +209,40 @@
     </main>
 
     <script>
-    /* ==== 로그인 체크 (미로그인 시 index.html로) ==== */
-    (function authGuard(){
-        const role = sessionStorage.getItem('pfm_role');
-        if(!role){
-            alert('로그인이 필요합니다');
-            location.href = 'index.html';
-            return;
-        }
-        // 사용자 정보 표시
-        document.getElementById('navUserName').textContent = sessionStorage.getItem('pfm_userName') || '-';
-        document.getElementById('navUserDept').textContent = sessionStorage.getItem('pfm_userDept') || '-';
-        // admin이면 패널·배지 노출
-        if(role === 'admin'){
-            document.getElementById('adminPanel').classList.remove('hidden');
-            document.getElementById('adminBadge').classList.remove('hidden');
-        }
-    })();
-
-    function logout(){
-        sessionStorage.clear();
-        location.href = 'index.html';
-    }
-
-    /* ==== 상태 ==== */
+    /* =========================================================
+       상태
+       ========================================================= */
     const STORAGE_KEYS = {
         noAccident: 'pfm_no_accident_start',
-        workData:   'pfm_work_data'
+        workData:   'pfm_work_data',
+        adminMode:  'pfm_admin_mode'
     };
     let WORK_DATA = [];
 
-    /* ==== 관리자 전용 함수 (권한 재검증) ==== */
-    function requireAdmin(){
-        if(sessionStorage.getItem('pfm_role') !== 'admin'){
-            alert('❌ 관리자 권한이 필요합니다');
-            return false;
+    function toggleAdminMode(){
+        const panel = document.getElementById('adminPanel');
+        const isOpen = !panel.classList.contains('hidden');
+        if(isOpen){
+            panel.classList.add('hidden');
+            document.getElementById('adminBtnText').textContent = '관리자 모드';
+            localStorage.setItem(STORAGE_KEYS.adminMode, '0');
+        } else {
+            panel.classList.remove('hidden');
+            document.getElementById('adminBtnText').textContent = '관리자 모드 종료';
+            localStorage.setItem(STORAGE_KEYS.adminMode, '1');
         }
-        return true;
     }
 
+    /* =========================================================
+       무재해
+       ========================================================= */
     function saveNoAccidentDate(){
-        if(!requireAdmin()) return;
         const val = document.getElementById('noAccidentStart').value;
         if(!val){ alert('시작일을 선택하세요'); return; }
         localStorage.setItem(STORAGE_KEYS.noAccident, val);
         updateNoAccidentKPI();
         alert('✅ 무재해 시작일 저장 완료');
     }
-
     function updateNoAccidentKPI(){
         const start = localStorage.getItem(STORAGE_KEYS.noAccident);
         if(!start){
@@ -275,70 +259,166 @@
         document.getElementById('kpiNoAccidentSince').textContent = `${start} ~`;
     }
 
+    /* =========================================================
+       ★ 핵심 수정: RFC4180 준수 TSV 파서
+       - 큰따옴표 안의 개행/탭은 모두 셀 내용으로 유지
+       - 큰따옴표 밖의 개행만 행 구분자로 처리
+       ========================================================= */
+    function parseTSV(raw){
+        const rows = [];
+        let cur = [];
+        let cell = '';
+        let inQuote = false;
+
+        for(let i = 0; i < raw.length; i++){
+            const c = raw[i];
+
+            if(inQuote){
+                if(c === '"'){
+                    if(raw[i+1] === '"'){ // escape ""
+                        cell += '"';
+                        i++;
+                    } else {
+                        inQuote = false;
+                    }
+                } else {
+                    cell += c; // 따옴표 안: 개행/탭 그대로 유지
+                }
+            } else {
+                if(c === '"'){
+                    inQuote = true;
+                } else if(c === '\t'){
+                    cur.push(cell);
+                    cell = '';
+                } else if(c === '\n'){
+                    cur.push(cell);
+                    rows.push(cur);
+                    cur = [];
+                    cell = '';
+                } else if(c === '\r'){
+                    // skip
+                } else {
+                    cell += c;
+                }
+            }
+        }
+        // 마지막 셀/행 처리
+        if(cell !== '' || cur.length > 0){
+            cur.push(cell);
+            rows.push(cur);
+        }
+        return rows;
+    }
+
+    /* =========================================================
+       헤더행 감지 (자동 스킵)
+       ========================================================= */
+    function isHeaderRow(cells){
+        const joined = cells.slice(0, 6).join('').replace(/\s/g,'');
+        const headerKeywords = ['일자','작업상세정보','NO.','고위험','운전부서','작업지시부서','작업장소','작업명','부서','공장','가동상태','실장','현장소장','부식개소','안전Monitor','CCTV','유무'];
+        // 첫 셀이 비어있거나 헤더 키워드가 여러 개 매칭되면 헤더로 간주
+        const c0 = (cells[0]||'').trim();
+        if(!c0) return true;
+        let hitCount = 0;
+        for(const kw of headerKeywords){
+            if(joined.includes(kw.replace(/\s/g,''))) hitCount++;
+            if(hitCount >= 2) return true;
+        }
+        return false;
+    }
+
+    /* =========================================================
+       데이터 행 검증
+       - 일자: 숫자/슬래시/하이픈 포함
+       - NO: 숫자
+       - 인원: 숫자
+       중 최소 2개 이상 만족해야 유효 데이터로 판단
+       ========================================================= */
+    function isValidDataRow(cells){
+        if(cells.length < 10) return false;
+        const c0 = (cells[0]||'').trim();
+        const c1 = (cells[1]||'').trim();
+        const c8 = (cells[8]||'').trim();
+
+        const dateOk = /^\d{1,4}[\/\-\.]\d{1,2}([\/\-\.]\d{1,4})?$/.test(c0);
+        const noOk = /^\d+$/.test(c1);
+        const peopleOk = /^\d+$/.test(c8);
+
+        return (dateOk?1:0) + (noOk?1:0) + (peopleOk?1:0) >= 2;
+    }
+
+    /* =========================================================
+       엑셀 붙여넣기 → 파싱 & 반영
+       ========================================================= */
     function parseAndApply(){
-        if(!requireAdmin()) return;
-        const raw = document.getElementById('excelPaste').value.trim();
+        const raw = document.getElementById('excelPaste').value;
         const resultEl = document.getElementById('parseResult');
-        if(!raw){
+        if(!raw.trim()){
             resultEl.textContent = '❌ 데이터가 비어있습니다';
             resultEl.className = 'ml-2 self-center text-sm font-bold text-rose-600';
             return;
         }
-        const lines = raw.split(/\r?\n/).filter(l=>l.trim());
+
+        const rows = parseTSV(raw);
         const parsed = [];
         let skip = 0;
-        lines.forEach((line, idx)=>{
-            const cells = line.split('\t');
+
+        rows.forEach((cells, idx) => {
             if(cells.length < 10){ skip++; return; }
-            if(cells[0].includes('일자') || cells[0].includes('NO')){ skip++; return; }
+            if(isHeaderRow(cells)){ skip++; return; }
+            if(!isValidDataRow(cells)){ skip++; return; }
+
+            const isO = v => (v||'').trim().toUpperCase() === 'O';
+
             parsed.push({
-                id: 'w'+Date.now()+'_'+idx,
-                date: cells[0]?.trim()||'',
-                no: cells[1]?.trim()||'',
-                highRisk: (cells[2]||'').trim().toUpperCase()==='O',
-                deptOwner: cells[3]?.trim()||'',
-                factory: cells[4]?.trim()||'',
-                orderDept: cells[5]?.trim()||'',
-                location: cells[6]?.trim()||'',
-                workName: cells[7]?.trim()||'',
-                people: parseInt(cells[8])||0,
-                time: cells[9]?.trim()||'',
-                vendor: cells[10]?.trim()||'',
-                subVendor: cells[11]?.trim()||'',
-                pfmSiteMgr: cells[12]?.trim()||'',
-                vendorSiteMgr: cells[13]?.trim()||'',
-                hazard: cells[14]?.trim()||'',
-                action: cells[15]?.trim()||'',
-                opStatus: cells[16]?.trim()||'',
-                signMgr1: (cells[17]||'').trim().toUpperCase()==='O',
-                signSiteMgr: (cells[18]||'').trim().toUpperCase()==='O',
-                fire: (cells[19]||'').trim().toUpperCase()==='O',
-                explode: (cells[20]||'').trim().toUpperCase()==='O',
-                suffocate: (cells[21]||'').trim().toUpperCase()==='O',
-                leak: (cells[22]||'').trim().toUpperCase()==='O',
-                etcRisk: (cells[23]||'').trim().toUpperCase()==='O',
-                signMgr2: (cells[24]||'').trim().toUpperCase()==='O',
-                corrosion: (cells[25]||'').trim().toUpperCase()==='O',
-                signHead: (cells[26]||'').trim().toUpperCase()==='O',
-                safetyMgrDept: cells[27]?.trim()||'',
-                safetyMgrName: cells[28]?.trim()||'',
-                cctv: (cells[29]||'').trim().toUpperCase()==='O'
+                id: 'w' + Date.now() + '_' + idx,
+                date:          (cells[0]||'').trim(),
+                no:            (cells[1]||'').trim(),
+                highRisk:      isO(cells[2]),
+                deptOwner:     (cells[3]||'').trim(),   // 운전부서(부서)
+                factory:       (cells[4]||'').trim(),   // 운전부서(공장)
+                orderDept:     (cells[5]||'').trim(),   // 작업지시부서
+                location:      (cells[6]||'').trim().replace(/^\n+/,''),  // 작업장소 (앞 개행 제거)
+                workName:      (cells[7]||'').trim(),   // 작업명
+                people:        parseInt(cells[8]) || 0,
+                time:          (cells[9]||'').trim(),
+                vendor:        (cells[10]||'').trim(),  // 용역사(계약사)
+                subVendor:     (cells[11]||'').trim(),  // 하도급 용역사
+                pfmSiteMgr:    (cells[12]||'').trim(),  // 포스코퓨처엠 현장소장 (작업 담당자)
+                vendorSiteMgr: (cells[13]||'').trim(),  // 용역사 현장소장 (협력/용역사 담당자)
+                hazard:        (cells[14]||'').trim(),
+                action:        (cells[15]||'').trim(),
+                opStatus:      (cells[16]||'').trim(),
+                signMgr1:      isO(cells[17]),
+                signSiteMgr:   isO(cells[18]),
+                fire:          isO(cells[19]),
+                explode:       isO(cells[20]),
+                suffocate:     isO(cells[21]),
+                leak:          isO(cells[22]),
+                etcRisk:       isO(cells[23]),
+                signMgr2:      isO(cells[24]),
+                corrosion:     isO(cells[25]),
+                signHead:      isO(cells[26]),
+                safetyMgrDept: (cells[27]||'').trim(),  // 안전관리자 소속
+                safetyMgrName: (cells[28]||'').trim(),  // 안전관리자 이름
+                cctv:          isO(cells[29])
             });
         });
-        if(parsed.length===0){
-            resultEl.textContent = '❌ 유효한 데이터가 없습니다';
+
+        if(parsed.length === 0){
+            resultEl.textContent = '❌ 유효한 데이터가 없습니다 (헤더/빈행만 감지됨)';
             resultEl.className = 'ml-2 self-center text-sm font-bold text-rose-600';
             return;
         }
+
         WORK_DATA = parsed;
         localStorage.setItem(STORAGE_KEYS.workData, JSON.stringify(WORK_DATA));
-        resultEl.textContent = `✅ ${parsed.length}건 반영 완료${skip?` (${skip}행 건너뜀)`:''}`;
+        resultEl.textContent = `✅ ${parsed.length}건 반영 완료${skip?` (${skip}행 자동 스킵)`:''}`;
         resultEl.className = 'ml-2 self-center text-sm font-bold text-emerald-600';
         renderAll();
     }
 
     function clearWorkData(){
-        if(!requireAdmin()) return;
         if(!confirm('작업 데이터를 모두 삭제하시겠습니까?')) return;
         WORK_DATA = [];
         localStorage.removeItem(STORAGE_KEYS.workData);
@@ -348,7 +428,6 @@
     }
 
     function exportJSON(){
-        if(!requireAdmin()) return;
         const data = {
             noAccidentStart: localStorage.getItem(STORAGE_KEYS.noAccident),
             workData: WORK_DATA,
@@ -364,7 +443,6 @@
     }
 
     function importJSON(evt){
-        if(!requireAdmin()) return;
         const file = evt.target.files[0];
         if(!file) return;
         const reader = new FileReader();
@@ -383,12 +461,14 @@
         reader.readAsText(file);
     }
 
-    /* ==== KPI ==== */
+    /* =========================================================
+       KPI
+       ========================================================= */
     function updateKPI(){
         const total = WORK_DATA.length;
         const high = WORK_DATA.filter(w=>w.highRisk).length;
-        const people = WORK_DATA.reduce((s,w)=>s+(w.people||0),0);
-        const vendors = new Set(WORK_DATA.map(w=>w.vendor).filter(v=>v&&v!=='없음')).size;
+        const people = WORK_DATA.reduce((s,w)=>s + (parseInt(w.people)||0), 0);
+        const vendors = new Set(WORK_DATA.map(w=>w.vendor).filter(v=>v && v!=='없음')).size;
         const noCctv = WORK_DATA.filter(w=>!w.cctv).length;
         const dates = [...new Set(WORK_DATA.map(w=>w.date).filter(Boolean))];
 
@@ -422,9 +502,12 @@
         }
     }
 
+    /* =========================================================
+       공사현장별 인원
+       ========================================================= */
     function renderSiteHeadcount(){
         const box = document.getElementById('siteHeadcount');
-        if(WORK_DATA.length===0){
+        if(WORK_DATA.length === 0){
             box.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">데이터 없음</p>';
             return;
         }
@@ -432,16 +515,17 @@
         WORK_DATA.forEach(w=>{
             const key = w.factory || w.location || '기타';
             if(!grp[key]) grp[key] = { people:0, works:0 };
-            grp[key].people += w.people||0;
+            grp[key].people += parseInt(w.people)||0;
             grp[key].works += 1;
         });
         const sorted = Object.entries(grp).sort((a,b)=>b[1].people-a[1].people);
         const maxPeople = sorted[0]?.[1].people || 1;
+
         box.innerHTML = sorted.map(([site,info])=>{
             const pct = Math.round(info.people/maxPeople*100);
             return `
             <div class="flex items-center gap-2 text-xs">
-                <span class="w-32 truncate font-semibold text-gray-700" title="${site}">${site}</span>
+                <span class="w-32 truncate font-semibold text-gray-700" title="${esc(site)}">${esc(site)}</span>
                 <div class="flex-1 bg-slate-100 rounded-full h-4 relative overflow-hidden">
                     <div class="bg-[#00529C] h-full rounded-full" style="width:${pct}%"></div>
                 </div>
@@ -451,10 +535,14 @@
         }).join('');
     }
 
+    /* =========================================================
+       작업 카드 리스트
+       ========================================================= */
     function renderWorkList(){
         const list = document.getElementById('workList');
         const filterRisk = document.getElementById('filterRisk').value;
         const keyword = document.getElementById('filterKeyword').value.trim().toLowerCase();
+
         let filtered = WORK_DATA;
         if(filterRisk==='high') filtered = filtered.filter(w=>w.highRisk);
         if(filterRisk==='normal') filtered = filtered.filter(w=>!w.highRisk);
@@ -463,13 +551,15 @@
                 (w.deptOwner+w.factory+w.location+w.workName+w.pfmSiteMgr+w.vendorSiteMgr+w.vendor+w.safetyMgrName).toLowerCase().includes(keyword)
             );
         }
-        if(filtered.length===0){
+
+        if(filtered.length === 0){
             list.innerHTML = `<p class="text-sm text-gray-400 text-center py-8">
                 <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
-                ${WORK_DATA.length===0?'작업 데이터가 없습니다.':'검색 결과가 없습니다.'}
+                ${WORK_DATA.length===0?'작업 데이터가 없습니다. <b>관리자 모드</b>에서 엑셀 데이터를 붙여넣으세요.':'검색 결과가 없습니다.'}
             </p>`;
             return;
         }
+
         list.innerHTML = filtered.map(w=>{
             const risks = [];
             if(w.fire) risks.push('<span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded">🔥 화재</span>');
@@ -478,6 +568,7 @@
             if(w.leak) risks.push('<span class="bg-teal-100 text-teal-700 text-[10px] font-bold px-1.5 py-0.5 rounded">💧 누출</span>');
             if(w.etcRisk) risks.push('<span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">⚠ 기타</span>');
             if(w.corrosion) risks.push('<span class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-1.5 py-0.5 rounded">🧪 부식개소</span>');
+
             return `
             <details class="border ${w.highRisk?'border-rose-200 bg-rose-50/30':'border-gray-200 bg-white'} rounded-lg">
                 <summary class="p-4">
@@ -485,21 +576,21 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 flex-wrap mb-1">
                                 ${w.highRisk?'<span class="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">⚠ 고위험</span>':'<span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">일반</span>'}
-                                <span class="text-[11px] text-gray-500">${w.date} · NO.${w.no}</span>
-                                <span class="text-[11px] text-gray-500">📍 ${w.factory||w.location}</span>
+                                <span class="text-[11px] text-gray-500">${esc(w.date)} · NO.${esc(w.no)}</span>
+                                <span class="text-[11px] text-gray-500">📍 ${esc(w.factory||w.location)}</span>
                                 ${!w.cctv?'<span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded">📹 CCTV없음</span>':''}
                             </div>
-                            <p class="text-sm font-black text-gray-900 truncate">${escapeHtml(w.workName)}</p>
+                            <p class="text-sm font-black text-gray-900">${esc(w.workName)}</p>
                             <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-600 mt-1.5">
-                                <span><i class="fa-solid fa-building mr-1 text-gray-400"></i>${w.deptOwner}</span>
+                                <span><i class="fa-solid fa-building mr-1 text-gray-400"></i>${esc(w.deptOwner)}</span>
                                 <span><i class="fa-solid fa-users mr-1 text-gray-400"></i>${w.people}명</span>
-                                <span><i class="fa-solid fa-clock mr-1 text-gray-400"></i>${w.time}</span>
-                                <span><i class="fa-solid fa-handshake mr-1 text-gray-400"></i>용역사: <b>${w.vendor}</b></span>
+                                <span><i class="fa-solid fa-clock mr-1 text-gray-400"></i>${esc(w.time)}</span>
+                                <span><i class="fa-solid fa-handshake mr-1 text-gray-400"></i>용역사: <b>${esc(w.vendor)}</b></span>
                             </div>
                             <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-gray-600 mt-0.5">
-                                <span>🏢 포스코 현장소장: <b>${w.pfmSiteMgr||'-'}</b></span>
-                                <span>👷 용역사 현장소장: <b>${w.vendorSiteMgr||'-'}</b></span>
-                                <span>🛡 안전관리자: <b>${w.safetyMgrName||'-'}</b> <span class="text-gray-400">(${w.safetyMgrDept||'-'})</span></span>
+                                <span>🏢 현장소장: <b>${esc(w.pfmSiteMgr)||'-'}</b></span>
+                                <span>👷 용역사 현장소장: <b>${esc(w.vendorSiteMgr)||'-'}</b></span>
+                                <span>🛡 안전관리자: <b>${esc(w.safetyMgrName)||'-'}</b> <span class="text-gray-400">(${esc(w.safetyMgrDept)||'-'})</span></span>
                             </div>
                             ${risks.length?`<div class="flex flex-wrap gap-1 mt-2">${risks.join('')}</div>`:''}
                         </div>
@@ -509,14 +600,14 @@
                 <div class="border-t border-gray-200 p-4 bg-slate-50 space-y-3">
                     ${w.hazard?`<div>
                         <p class="text-[11px] font-black text-rose-700 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>잠재위험</p>
-                        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${escapeHtml(w.hazard)}</pre>
+                        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${esc(w.hazard)}</pre>
                     </div>`:''}
                     ${w.action?`<div>
                         <p class="text-[11px] font-black text-emerald-700 mb-1"><i class="fa-solid fa-shield-halved mr-1"></i>안전 조치사항</p>
-                        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${escapeHtml(w.action)}</pre>
+                        <pre class="text-[11px] text-gray-700 whitespace-pre-wrap font-sans bg-white p-2 rounded border border-gray-200">${esc(w.action)}</pre>
                     </div>`:''}
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
-                        <div class="bg-white rounded p-2 border"><b>가동상태:</b> ${w.opStatus||'-'}</div>
+                        <div class="bg-white rounded p-2 border"><b>가동상태:</b> ${esc(w.opStatus)||'-'}</div>
                         <div class="bg-white rounded p-2 border"><b>실장결재(수리):</b> ${w.signMgr1?'✅':'❌'}</div>
                         <div class="bg-white rounded p-2 border"><b>소장결재(점검):</b> ${w.signSiteMgr?'✅':'❌'}</div>
                         <div class="bg-white rounded p-2 border"><b>부장결재(부식):</b> ${w.signHead?'✅':'—'}</div>
@@ -526,7 +617,7 @@
         }).join('');
     }
 
-    function escapeHtml(s){
+    function esc(s){
         return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
@@ -537,12 +628,21 @@
         renderWorkList();
     }
 
-    /* ==== 데이터 로드 & 초기 렌더 ==== */
-    try{
-        const saved = localStorage.getItem(STORAGE_KEYS.workData);
-        if(saved) WORK_DATA = JSON.parse(saved);
-    }catch(e){ WORK_DATA = []; }
-    renderAll();
+    /* =========================================================
+       초기화
+       ========================================================= */
+    (function init(){
+        try{
+            const saved = localStorage.getItem(STORAGE_KEYS.workData);
+            if(saved) WORK_DATA = JSON.parse(saved);
+        }catch(e){ WORK_DATA = []; }
+
+        if(localStorage.getItem(STORAGE_KEYS.adminMode) === '1'){
+            document.getElementById('adminPanel').classList.remove('hidden');
+            document.getElementById('adminBtnText').textContent = '관리자 모드 종료';
+        }
+        renderAll();
+    })();
     </script>
 </body>
 </html>
